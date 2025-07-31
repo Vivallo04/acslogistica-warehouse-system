@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DotsLoader } from "@/components/ui/loading"
-import { Eye, EyeOff, LogIn } from "lucide-react"
+import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react"
 import { loginUser } from "@/lib/auth"
 
 export default function LoginPage() {
@@ -30,9 +30,10 @@ export default function LoginPage() {
 
     try {
       await loginUser(email, password)
+      // Redirect to home page after successful login
       router.push("/")
     } catch (error: any) {
-      setError(error.message)
+      setError(error.message || 'Error de autenticación desconocido')
     } finally {
       setIsLoading(false)
     }
@@ -64,11 +65,14 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Login Form Error */}
               {error && (
                 <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email Corporativo</Label>

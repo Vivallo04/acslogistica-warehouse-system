@@ -28,7 +28,11 @@ export function ProtectedRoute({
         return
       }
 
-      if (!userRole?.approved) {
+      if (!userRole) {
+        return
+      }
+
+      if (!userRole.approved) {
         router.push("/pending-approval")
         return
       }

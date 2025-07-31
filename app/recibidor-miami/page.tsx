@@ -112,21 +112,21 @@ function RecibidorMiamiContent() {
       // Build query parameters
       const params = new URLSearchParams()
       
-      if (filters.estado && filters.estado !== 'all') params.append('estado', filters.estado)
-      if (filters.pais && filters.pais !== 'all') params.append('pais', filters.pais)
-      if (filters.numeroTarima && filters.numeroTarima !== 'all') params.append('numeroTarima', filters.numeroTarima)
-      if (filters.guiaAerea) params.append('guiaAerea', filters.guiaAerea)
-      if (filters.buscarPorTracking) params.append('buscarPorTracking', filters.buscarPorTracking)
-      if (filters.buscarPorCliente) params.append('buscarPorCliente', filters.buscarPorCliente)
-      if (filters.ciPaquete) params.append('ciPaquete', filters.ciPaquete)
-      if (filters.desde) params.append('desde', format(filters.desde, 'dd/MM/yyyy'))
-      if (filters.hasta) params.append('hasta', format(filters.hasta, 'dd/MM/yyyy'))
+      if (filters.estado && filters.estado !== 'all') params.append('Estado', filters.estado)
+      if (filters.pais && filters.pais !== 'all') params.append('Pais', filters.pais)
+      if (filters.numeroTarima && filters.numeroTarima !== 'all') params.append('NumeroTarima', filters.numeroTarima)
+      if (filters.guiaAerea) params.append('GuiaAerea', filters.guiaAerea)
+      if (filters.buscarPorTracking) params.append('BuscarPorTracking', filters.buscarPorTracking)
+      if (filters.buscarPorCliente) params.append('BuscarPorCliente', filters.buscarPorCliente)
+      if (filters.ciPaquete) params.append('ClPaquete', filters.ciPaquete)
+      if (filters.desde) params.append('Desde', format(filters.desde, 'dd/MM/yyyy'))
+      if (filters.hasta) params.append('Hasta', format(filters.hasta, 'dd/MM/yyyy'))
       
-      params.append('elementosPorPagina', filters.elementosPorPagina.toString())
-      params.append('pagina', filters.pagina.toString())
+      params.append('ElementosPorPagina', filters.elementosPorPagina.toString())
+      params.append('Pagina', filters.pagina.toString())
 
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'
-      const response = await fetch(`${apiBaseUrl}/api/packages?${params.toString()}`)
+      const response = await fetch(`${apiBaseUrl}/api/Packages?${params.toString()}`)
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -185,9 +185,9 @@ function RecibidorMiamiContent() {
     try {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'
       const [statesRes, countriesRes, tarimasRes] = await Promise.all([
-        fetch(`${apiBaseUrl}/api/packages/metadata/states`),
-        fetch(`${apiBaseUrl}/api/packages/metadata/countries`),
-        fetch(`${apiBaseUrl}/api/packages/metadata/tarimas`)
+        fetch(`${apiBaseUrl}/api/Packages/metadata/states`),
+        fetch(`${apiBaseUrl}/api/Packages/metadata/countries`),
+        fetch(`${apiBaseUrl}/api/Packages/metadata/tarimas`)
       ])
 
       if (statesRes.ok) {

@@ -4,13 +4,15 @@ import { validateAuthFromCookies } from '@/lib/server-auth'
 
 // Define protected routes that require authentication
 const PROTECTED_ROUTES = [
-  '/',
-  '/recibidor-miami',
+  // '/', // Home route uses client-side ProtectedRoute component only
+  // '/recibidor-miami', // Uses client-side ProtectedRoute component
   '/dashboard'
 ]
 
 // Define public routes that don't require authentication
 const PUBLIC_ROUTES = [
+  '/', // Home route uses client-side ProtectedRoute component
+  '/recibidor-miami', // Uses client-side ProtectedRoute component
   '/login',
   '/register',
   '/unauthorized',
@@ -70,10 +72,6 @@ export async function middleware(request: NextRequest) {
     const authResult = await validateAuthFromCookies(request)
     
     if (!authResult.valid) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[MIDDLEWARE] Unauthorized access attempt to ${pathname}: ${authResult.error}`)
-      }
-      
       // Redirect to login page with return URL
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('returnUrl', pathname)
@@ -82,9 +80,6 @@ export async function middleware(request: NextRequest) {
     }
 
     // User is authenticated, allow access
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[MIDDLEWARE] Authorized access to ${pathname} by ${authResult.user?.email}`)
-    }
     return NextResponse.next()
   }
 
@@ -93,17 +88,9 @@ export async function middleware(request: NextRequest) {
   const authResult = await validateAuthFromCookies(request)
   
   if (!authResult.valid) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[MIDDLEWARE] Unauthorized access to undefined route ${pathname}: ${authResult.error}`)
-    }
-    
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('returnUrl', pathname)
     return NextResponse.redirect(loginUrl)
-  }
-
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[MIDDLEWARE] Authorized access to undefined route ${pathname} by ${authResult.user?.email}`)
   }
 
   return NextResponse.next()

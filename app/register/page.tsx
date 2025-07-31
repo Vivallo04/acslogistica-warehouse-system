@@ -13,9 +13,11 @@ import { DotsLoader } from "@/components/ui/loading"
 import { 
   Eye, EyeOff, UserPlus, CheckCircle, Mail, Lock, User, 
   Shield, Truck, BarChart3, MessageSquare, Smartphone, 
-  ArrowRight, Check, AlertCircle 
+  ArrowRight, Check, AlertCircle, RefreshCw, ExternalLink, Clock
 } from "lucide-react"
 import { registerUser } from "@/lib/auth"
+import { auth } from "@/lib/firebase"
+import { sendEmailVerification } from "firebase/auth"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -31,6 +33,10 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({})
+  const [userEmail, setUserEmail] = useState("")
+  const [isResendingEmail, setIsResendingEmail] = useState(false)
+  const [resendMessage, setResendMessage] = useState("")
+  const [resendCount, setResendCount] = useState(0)
 
   // Password strength calculation
   const getPasswordStrength = (password: string) => {
@@ -104,6 +110,7 @@ export default function RegisterPage() {
 
     try {
       await registerUser(formData.email, formData.password, formData.fullName)
+      setUserEmail(formData.email)
       setSuccess(true)
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Error inesperado durante el registro')
@@ -112,25 +119,176 @@ export default function RegisterPage() {
     }
   }
 
+  const handleResendVerification = async () => {
+    if (resendCount >= 3) {
+      setResendMessage("Has alcanzado el límite de reenvíos. Contacta al soporte si necesitas ayuda.")
+      return
+    }
+
+    setIsResendingEmail(true)
+    setResendMessage("")
+
+    try {
+      const user = auth.currentUser
+      if (user) {
+        await sendEmailVerification(user)
+        setResendCount(prev => prev + 1)
+        setResendMessage("✅ Email de verificación enviado nuevamente")
+      } else {
+        setResendMessage("❌ Error: No se pudo encontrar la sesión del usuario")
+      }
+    } catch (error) {
+      console.error("Error resending verification email:", error)
+      setResendMessage("❌ Error al reenviar el email. Intenta nuevamente.")
+    } finally {
+      setIsResendingEmail(false)
+    }
+  }
+
+  const getEmailProviderLink = (email: string) => {
+    const domain = email.split('@')[1]?.toLowerCase()
+    switch (domain) {
+      case 'gmail.com':
+        return 'https://mail.google.com'
+      case 'outlook.com':
+      case 'hotmail.com':
+      case 'live.com':
+        return 'https://outlook.live.com'
+      case 'yahoo.com':
+        return 'https://mail.yahoo.com'
+      default:
+        return null
+    }
+  }
+
   if (success) {
+    const emailProviderLink = getEmailProviderLink(userEmail)
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-2xl border-0 bg-card backdrop-blur-sm">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <CheckCircle className="w-8 h-8 text-white" />
+        <Card className="w-full max-w-lg shadow-2xl border-0 bg-card backdrop-blur-sm">
+          <CardContent className="p-8">
+            {/* Header with Email Icon */}
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Mail className="w-10 h-10 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">📧 Verifica tu Email</h1>
+              <p className="text-gray-600 text-lg">
+                ¡Cuenta creada exitosamente!
+              </p>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">¡Cuenta Creada!</h1>
-            <p className="text-gray-600 mb-6 leading-relaxed">
-              Tu solicitud ha sido enviada exitosamente. Recibirás un email de confirmación y 
-              notificación cuando tu cuenta sea aprobada por nuestro equipo.
-            </p>
-            <Link href="/login">
-              <Button variant="accent" className="w-full h-12 font-medium shadow-lg transition-all duration-200 rounded-full">
-                Continuar al Login
-                <ArrowRight className="w-4 h-4 ml-2" />
+
+            {/* Two-Step Process */}
+            <div className="space-y-6 mb-8">
+              {/* Step 1: Email Verification */}
+              <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-2">Verifica tu email</h3>
+                  <p className="text-gray-600 text-sm mb-3">
+                    Enviamos un enlace de verificación a:
+                  </p>
+                  <p className="font-mono text-sm bg-white px-3 py-2 rounded border text-blue-600 break-all">
+                    {userEmail}
+                  </p>
+                  <p className="text-gray-600 text-sm mt-2">
+                    Haz clic en el enlace para verificar tu cuenta.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2: Admin Approval */}
+              <div className="flex items-start space-x-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-2">Espera la aprobación</h3>
+                  <p className="text-gray-600 text-sm">
+                    Después de verificar tu email, nuestro equipo revisará tu solicitud y te notificará cuando sea aprobada.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-4">
+              {/* Primary Action - Open Email */}
+              {emailProviderLink ? (
+                <a 
+                  href={emailProviderLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button variant="accent" className="w-full h-12 font-medium shadow-lg transition-all duration-200 rounded-full">
+                    <Mail className="w-5 h-5 mr-2" />
+                    Abrir Email
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="accent" className="w-full h-12 font-medium shadow-lg transition-all duration-200 rounded-full" disabled>
+                  <Mail className="w-5 h-5 mr-2" />
+                  Revisa tu Email
+                </Button>
+              )}
+
+              {/* Secondary Action - Resend Email */}
+              <Button 
+                variant="outline" 
+                className="w-full h-12 font-medium transition-all duration-200 rounded-full" 
+                onClick={handleResendVerification}
+                disabled={isResendingEmail || resendCount >= 3}
+              >
+                {isResendingEmail ? (
+                  <div className="flex items-center">
+                    <div className="mr-2">
+                      <DotsLoader size="sm" />
+                    </div>
+                    Reenviando...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Reenviar Verificación
+                    {resendCount > 0 && (
+                      <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded-full">
+                        {resendCount}/3
+                      </span>
+                    )}
+                  </div>
+                )}
               </Button>
-            </Link>
+
+              {/* Resend Message */}
+              {resendMessage && (
+                <Alert className={`${resendMessage.includes('✅') ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                  <AlertDescription className={`${resendMessage.includes('✅') ? 'text-green-800' : 'text-red-800'}`}>
+                    {resendMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            {/* Help Section */}
+            <div className="mt-8 pt-6 border-t border-border text-center">
+              <p className="text-sm text-gray-600 mb-4">
+                ¿No ves el email? Revisa tu carpeta de spam o correo no deseado.
+              </p>
+              
+              {/* Login Link */}
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  ¿Ya verificaste tu email?{" "}
+                </p>
+                <Link href="/login">
+                  <Button variant="ghost" className="text-accent-blue hover:text-accent-blue/80 font-semibold transition-colors duration-200">
+                    Ir a Iniciar Sesión
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

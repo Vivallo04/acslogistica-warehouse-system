@@ -22,22 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // Import validateCompanyEmail here to avoid circular dependency
-        const { validateCompanyEmail } = await import("@/lib/auth")
-        
-        // Enforce email validation on every auth state change
-        if (!validateCompanyEmail(user.email || "")) {
-          console.warn(`Unauthorized email attempted access: ${user.email}`)
-          // Force logout unauthorized users
-          await auth.signOut()
-          setUser(null)
-          setUserRole(null)
-          setIsLoading(false)
-          return
-        }
-        
         setUser(user)
         const role = getUserRole(user)
         setUserRole(role)

@@ -26,7 +26,7 @@ export const ROLE_PERMISSIONS = {
   pending: [],
 }
 
-export function validateCompanyEmail(email: string): boolean {
+export async function validateCompanyEmail(email: string): Promise<boolean> {
   const normalizedEmail = email.toLowerCase().trim()
   
   // Allow @lambdahq.com emails
@@ -76,7 +76,7 @@ export function validateCompanyEmail(email: string): boolean {
 }
 
 export async function registerUser(email: string, password: string, fullName: string) {
-  if (!validateCompanyEmail(email)) {
+  if (!(await validateCompanyEmail(email))) {
     throw new Error("Acceso no autorizado. Contacta al administrador.")
   }
 
@@ -142,7 +142,7 @@ export async function registerUser(email: string, password: string, fullName: st
 
 export async function loginUser(email: string, password: string) {
   // Validate email before attempting login
-  if (!validateCompanyEmail(email)) {
+  if (!(await validateCompanyEmail(email))) {
     throw new Error("Acceso no autorizado. Contacta al administrador.")
   }
   

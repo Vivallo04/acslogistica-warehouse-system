@@ -36,7 +36,7 @@ export function ThemeToggle({ showText = false }: { showText?: boolean }) {
       ) : (
         <Moon className="h-4 w-4 transition-all" />
       )}
-      {showText && <span>{theme === "dark" ? "Tema" : "Tema"}</span>}
+      {showText && <span>{theme === "dark" ? "Modo Claro" : "Modo Oscuro"}</span>}
       <span className="sr-only">Toggle theme</span>
     </Button>
   )

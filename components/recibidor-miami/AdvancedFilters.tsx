@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,12 +14,11 @@ import {
   User, 
   FileText, 
   Settings,
-  ChevronUp,
   X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type FilterValue = string | number | Date
+type FilterValue = string | number | Date | undefined
 
 interface AdvancedFiltersProps {
   filters: {

@@ -278,12 +278,12 @@ export function ReportIssueDialog({ open, onOpenChange }: ReportIssueDialogProps
           {/* Screenshot Option */}
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="screenshot"
+              id="include-environment"
               checked={includeScreenshot}
               onCheckedChange={(checked) => setIncludeScreenshot(checked === true)}
             />
-            <Label htmlFor="screenshot" className="text-sm">
-              Incluir información del entorno para depuración
+            <Label htmlFor="include-environment" className="text-sm">
+              Permitir captura de pantalla para depuración (próximamente)
             </Label>
           </div>
         </div>

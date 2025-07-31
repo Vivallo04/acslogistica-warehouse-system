@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { RefreshCw, Plane, Edit, Eye } from "lucide-react"
+import { Plane, Edit, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { SearchHero } from "@/components/recibidor-miami/SearchHero"
 import { SmartFilterBar } from "@/components/recibidor-miami/SmartFilterBar"
@@ -16,7 +16,7 @@ import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
 import { format } from "date-fns"
 
 // Types
-type FilterValue = string | number | Date
+type FilterValue = string | number | Date | undefined
 interface PackageData {
   nid: number
   fecha: string
@@ -231,13 +231,6 @@ function RecibidorMiamiContent() {
     setFilters(prev => ({ ...prev, pagina: newPage }))
   }
 
-  const handlePageSizeChange = (newSize: number) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      elementosPorPagina: newSize,
-      pagina: 1 
-    }))
-  }
 
   const clearFilters = () => {
     setFilters({

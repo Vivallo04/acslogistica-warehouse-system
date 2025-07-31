@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { 
-  Filter, 
+ 
   X, 
   Calendar, 
   ChevronDown, 
@@ -22,6 +22,8 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
+type FilterValue = string | number | Date | undefined
+
 interface SmartFilterBarProps {
   filters: {
     estado: string
@@ -31,7 +33,7 @@ interface SmartFilterBarProps {
   }
   availableStates: string[]
   availableCountries: string[]
-  onFilterChange: (key: string, value: any) => void
+  onFilterChange: (key: string, value: FilterValue) => void
   onClearFilter: (key: string) => void
   onClearAll: () => void
   onShowAdvanced: () => void

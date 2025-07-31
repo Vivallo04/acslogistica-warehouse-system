@@ -22,9 +22,19 @@ export const auth = getAuth(app)
 export const functions = getFunctions(app)
 
 // ---------- LOCAL / PREVIEW FALLBACK ----------
-// If the API key is missing, connect to the local Firebase emulator suite
-if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-  console.warn("[firebase] NEXT_PUBLIC_FIREBASE_API_KEY is missing – connecting to the Auth Emulator instead.")
+// Only fall back to the emulator when running in development AND the API key is missing
+if (
+  process.env.NODE_ENV === 'development' &&
+  !process.env.NEXT_PUBLIC_FIREBASE_API_KEY
+) {
+  console.warn(
+    "[firebase] NEXT_PUBLIC_FIREBASE_API_KEY is missing – connecting to the Auth Emulator instead."
+  );
   // Runs on localhost:9099 by default (`firebase emulators:start`)
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true })
+} else if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+  // In production, log an error if the API key is missing
+  console.error(
+    "[firebase] CRITICAL: NEXT_PUBLIC_FIREBASE_API_KEY is missing in production environment. Firebase will not work properly."
+  );
 }

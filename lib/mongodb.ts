@@ -63,9 +63,8 @@ class MongoDB {
         MongoClient = mongodb.MongoClient
       } catch (importError) {
         console.warn('MongoDB package not installed yet. Install with: yarn add mongodb')
-        // Fallback to console logging for now
         this.isConnected = false
-        return
+        throw new Error('MongoDB package is not installed. Please install it with: yarn add mongodb')
       }
 
       const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017'
@@ -109,9 +108,11 @@ class MongoDB {
   async saveFeedback(feedback: Omit<FeedbackDocument, '_id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     await this.connect()
     
+    // Generate feedback ID with timestamp and randomness to avoid collisions
+    const feedbackId = 'FDB-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()
+    
     if (!this.isConnected) {
       // Fallback if MongoDB isn't available
-      const feedbackId = 'feedback_' + Date.now()
       console.log('MongoDB not available - logging feedback:', { ...feedback, feedbackId })
       return feedbackId
     }
@@ -126,9 +127,9 @@ class MongoDB {
       }
       
       const result = await collection.insertOne(document)
-      console.log('Feedback saved to MongoDB Atlas:', result.insertedId.toString())
+      console.log('Feedback saved to MongoDB Atlas:', feedbackId)
       
-      return result.insertedId.toString()
+      return feedbackId
     } catch (error) {
       console.error('Error saving feedback to MongoDB Atlas:', error)
       throw error
@@ -138,8 +139,8 @@ class MongoDB {
   async saveIssue(issue: Omit<IssueDocument, '_id' | 'issueId' | 'createdAt' | 'updatedAt'>): Promise<string> {
     await this.connect()
     
-    // Generate issue ID
-    const issueId = 'ISS-' + Date.now().toString().slice(-6)
+    // Generate issue ID with timestamp and randomness to avoid collisions
+    const issueId = 'ISS-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()
     
     if (!this.isConnected) {
       // Fallback if MongoDB isn't available

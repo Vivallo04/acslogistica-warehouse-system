@@ -3,9 +3,8 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { Search, Package, Clock, AlertTriangle, Zap, MapPin } from "lucide-react"
+import { Search, Package, Clock, AlertTriangle, Zap } from "lucide-react"
 
 interface SearchHeroProps {
   searchValue: string

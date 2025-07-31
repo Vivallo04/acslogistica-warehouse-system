@@ -23,25 +23,27 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                            pathname === "/unauthorized" ||
                            pathname === "/pending-approval"
 
-  // Check for 404 page by monitoring body attribute
+  // Check for 404 page using pathname pattern
   useEffect(() => {
-    const checkFor404 = () => {
-      const pageType = document.body.getAttribute('data-page-type')
-      setIs404Page(pageType === 'not-found')
-    }
+    // Known valid routes pattern
+    const validRoutes = [
+      '/',
+      '/login',
+      '/register',
+      '/unauthorized',
+      '/pending-approval',
+      '/recibidor-miami',
+      '/preregistro'
+    ]
     
-    // Check immediately
-    checkFor404()
+    // Check if current path matches any known route or is an API route
+    const isValidRoute = validRoutes.some(route => 
+      pathname === route || pathname.startsWith(route + '/')
+    ) || pathname.startsWith('/api/')
     
-    // Set up a mutation observer to watch for changes
-    const observer = new MutationObserver(checkFor404)
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['data-page-type']
-    })
-    
-    return () => observer.disconnect()
-  }, [])
+    // If it's not a valid route and not already detected as standalone, it's likely a 404
+    setIs404Page(!isValidRoute && !isStandalonePage)
+  }, [pathname, isStandalonePage])
 
   const shouldShowStandalone = isStandalonePage || is404Page
 

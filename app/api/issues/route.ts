@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { mongodb } from '@/lib/mongodb'
 import { emailService } from '@/lib/email'
+import { validateAuthToken, AUTH_RESPONSES } from '@/lib/server-auth'
 
 // Define validation schema
 interface IssueRequest {
@@ -18,6 +19,8 @@ interface IssueRequest {
 }
 
 function validateIssue(data: any): data is IssueRequest {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  
   return (
     typeof data.type === 'string' &&
     typeof data.priority === 'string' &&
@@ -28,10 +31,25 @@ function validateIssue(data: any): data is IssueRequest {
     typeof data.includeScreenshot === 'boolean' &&
     data.environment &&
     data.type.length > 0 &&
+    data.type.length <= 50 &&
     data.title.length > 0 &&
+    data.title.length <= 200 &&
     data.description.length > 0 &&
+    data.description.length <= 2000 &&
+    emailRegex.test(data.email) &&
     ['bug', 'crash', 'performance', 'ui_issue'].includes(data.type) &&
-    ['low', 'medium', 'high', 'critical'].includes(data.priority)
+    ['low', 'medium', 'high', 'critical'].includes(data.priority) &&
+    validateEnvironment(data.environment)
+  )
+}
+
+function validateEnvironment(env: any): boolean {
+  return (
+    typeof env === 'object' &&
+    env !== null &&
+    typeof env.userAgent === 'string' &&
+    typeof env.url === 'string' &&
+    typeof env.timestamp === 'string'
   )
 }
 
@@ -65,8 +83,11 @@ export async function POST(request: NextRequest) {
       status: 'new'
     })
 
-    // Send email notification
-    await emailService.sendIssueNotification({ ...body, issueId })
+    // Send email notification (non-blocking)
+    emailService.sendIssueNotification({ ...body, issueId }).catch(emailError => {
+      console.error('Failed to send issue notification email:', emailError)
+      // Continue execution - don't fail the request
+    })
 
     return NextResponse.json(
       { 
@@ -89,7 +110,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Optional: Add authentication check here
+    // Authentication check required for sensitive data
+    const authResult = await validateAuthToken(request)
+    if (!authResult.valid) {
+      return NextResponse.json(
+        AUTH_RESPONSES.UNAUTHORIZED,
+        { status: 401 }
+      )
+    }
     
     await mongodb.connect()
     const issues = await mongodb.getIssues(50)

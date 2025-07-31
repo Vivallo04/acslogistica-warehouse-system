@@ -42,7 +42,7 @@ export default function RegisterPage() {
     return strength
   }
 
-  const validateField = (name: string, value: string) => {
+  const validateField = (name: string, value: string, currentFormData = formData) => {
     switch (name) {
       case "fullName":
         if (!value.trim()) return "El nombre es requerido"
@@ -58,7 +58,7 @@ export default function RegisterPage() {
         break
       case "confirmPassword":
         if (!value) return "Confirma tu contraseña"
-        if (value !== formData.password) return "Las contraseñas no coinciden"
+        if (value !== currentFormData.password) return "Las contraseñas no coinciden"
         break
     }
     return ""
@@ -66,11 +66,12 @@ export default function RegisterPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const newFormData = { ...formData, [name]: value }
+    setFormData(newFormData)
     
     // Real-time validation
     if (touchedFields[name]) {
-      const error = validateField(name, value)
+      const error = validateField(name, value, newFormData)
       setFieldErrors(prev => ({ ...prev, [name]: error }))
     }
   }

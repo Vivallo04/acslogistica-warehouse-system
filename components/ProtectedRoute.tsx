@@ -50,14 +50,6 @@ export function ProtectedRoute({
     )
   }
 
-  if (!user) {
-    return null
-  }
-
-  if (!userRole?.approved) {
-    return null
-  }
-
   return <>{children}</>
 }
 

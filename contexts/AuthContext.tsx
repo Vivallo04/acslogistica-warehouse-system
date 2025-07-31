@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { onAuthStateChanged, type User } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { getUserRole, type UserRole } from "@/lib/auth"
@@ -51,10 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe
   }, [])
 
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = useCallback((permission: string): boolean => {
     if (!userRole || !userRole.approved) return false
     return userRole.permissions.includes(permission) || userRole.role === "super_admin"
-  }
+  }, [userRole])
 
 
   return (

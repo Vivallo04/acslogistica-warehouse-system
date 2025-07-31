@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { mongodb } from '@/lib/mongodb'
 import { emailService } from '@/lib/email'
+import { validateAuthToken, AUTH_RESPONSES } from '@/lib/server-auth'
 
-// Define validation schema (we'll use basic validation for now)
+// Define validation schema
 interface FeedbackRequest {
   type: string
   subject: string
@@ -14,6 +15,8 @@ interface FeedbackRequest {
 }
 
 function validateFeedback(data: any): data is FeedbackRequest {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  
   return (
     typeof data.type === 'string' &&
     typeof data.subject === 'string' &&
@@ -23,8 +26,24 @@ function validateFeedback(data: any): data is FeedbackRequest {
     typeof data.userRole === 'string' &&
     data.environment &&
     data.type.length > 0 &&
+    data.type.length <= 50 &&
     data.subject.length > 0 &&
-    data.message.length > 0
+    data.subject.length <= 200 &&
+    data.message.length > 0 &&
+    data.message.length <= 2000 &&
+    emailRegex.test(data.email) &&
+    data.rating >= 1 && data.rating <= 5 &&
+    validateEnvironment(data.environment)
+  )
+}
+
+function validateEnvironment(env: any): boolean {
+  return (
+    typeof env === 'object' &&
+    env !== null &&
+    typeof env.userAgent === 'string' &&
+    typeof env.url === 'string' &&
+    typeof env.timestamp === 'string'
   )
 }
 
@@ -55,8 +74,11 @@ export async function POST(request: NextRequest) {
       status: 'new'
     })
 
-    // Send email notification
-    await emailService.sendFeedbackNotification(body)
+    // Send email notification (non-blocking)
+    emailService.sendFeedbackNotification(body).catch(emailError => {
+      console.error('Failed to send feedback notification email:', emailError)
+      // Continue execution - don't fail the request
+    })
 
     return NextResponse.json(
       { 
@@ -79,7 +101,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Optional: Add authentication check here
+    // Authentication check required for sensitive data
+    const authResult = await validateAuthToken(request)
+    if (!authResult.valid) {
+      return NextResponse.json(
+        AUTH_RESPONSES.UNAUTHORIZED,
+        { status: 401 }
+      )
+    }
     
     await mongodb.connect()
     const feedback = await mongodb.getFeedback(50)

@@ -135,14 +135,19 @@ function PreRegistroContent() {
               <Label htmlFor="peso" className="text-sm font-medium">
                 Peso
               </Label>
-              <Input
-                id="peso"
-                type="text"
-                value={formData.peso}
-                onChange={(e) => handleInputChange("peso", e.target.value)}
-                placeholder="Ej: 2.5 kg"
-                className="w-full"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="peso"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={formData.peso}
+                  onChange={(e) => handleInputChange("peso", e.target.value)}
+                  placeholder="2.5"
+                  className="w-full"
+                />
+                <span className="text-sm text-muted-foreground">kg</span>
+              </div>
             </div>
 
             {/* Número de Tarima - Required */}

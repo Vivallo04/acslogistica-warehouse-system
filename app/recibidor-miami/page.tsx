@@ -286,6 +286,15 @@ function RecibidorMiamiContent() {
   
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout)
+      }
+    }
+  }, [searchTimeout])
+  
   const handleQuickFilter = (filterType: string, value: string) => {
     console.log(`Applying quick filter: ${filterType} = ${value}`)
     

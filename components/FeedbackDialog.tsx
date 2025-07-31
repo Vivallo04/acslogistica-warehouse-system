@@ -26,7 +26,7 @@ const feedbackTypes = [
 ]
 
 export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
-  const { user } = useAuth()
+  const { user, userRole } = useAuth()
   const { toast } = useToast()
   
   const [feedbackType, setFeedbackType] = useState("")
@@ -37,10 +37,21 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    
     if (!feedbackType || !subject || !message) {
       toast({
         title: "Información Faltante",
         description: "Por favor completa todos los campos requeridos.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (email && !emailRegex.test(email)) {
+      toast({
+        title: "Email Inválido",
+        description: "Por favor ingresa un email válido.",
         variant: "destructive",
       })
       return
@@ -64,20 +75,27 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
         message,
         rating,
         email,
-        userRole: user?.email || 'anonymous',
+        userRole: userRole?.role || 'anonymous',
         environment: environmentInfo,
       }
 
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+      
       const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(feedbackData),
+        signal: controller.signal,
       })
 
+      clearTimeout(timeoutId)
+      
       if (!response.ok) {
-        throw new Error('Failed to submit feedback')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to submit feedback')
       }
 
       toast({
@@ -94,9 +112,20 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
 
     } catch (error) {
       console.error('Error submitting feedback:', error)
+      
+      let errorMessage = "No se pudo enviar el comentario. Inténtalo de nuevo."
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = "El envío tardó demasiado tiempo. Verifica tu conexión e inténtalo de nuevo."
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "No se pudo enviar el comentario. Inténtalo de nuevo.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

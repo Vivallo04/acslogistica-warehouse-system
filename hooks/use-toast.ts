@@ -25,11 +25,8 @@ const actionTypes = {
   REMOVE_TOAST: "REMOVE_TOAST",
 } as const
 
-let count = 0
-
 function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
 type ActionType = typeof actionTypes
@@ -58,6 +55,10 @@ interface State {
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
+/**
+ * Cleans up all pending toast removal timeouts.
+ * Call this on app unmount or page navigation to prevent memory leaks.
+ */
 export function cleanupToasts() {
   toastTimeouts.forEach((timeout) => clearTimeout(timeout))
   toastTimeouts.clear()

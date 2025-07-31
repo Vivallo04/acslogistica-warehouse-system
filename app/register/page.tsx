@@ -398,6 +398,8 @@ export default function RegisterPage() {
                       placeholder="Tu nombre completo"
                       required
                       disabled={isLoading}
+                      aria-invalid={fieldErrors.fullName && touchedFields.fullName ? 'true' : 'false'}
+                      aria-describedby={fieldErrors.fullName && touchedFields.fullName ? 'fullName-error' : undefined}
                       className={`pl-11 h-12 text-base text-gray-900 block w-full rounded-full border shadow-sm focus:ring-2 focus:ring-accent-blue transition-all duration-200 ${
                         fieldErrors.fullName && touchedFields.fullName
                           ? 'border-border bg-red-50 focus:border-destructive'
@@ -406,7 +408,7 @@ export default function RegisterPage() {
                     />
                   </div>
                   {fieldErrors.fullName && touchedFields.fullName && (
-                    <p className="text-sm text-red-600 flex items-center mt-1">
+                    <p id="fullName-error" className="text-sm text-red-600 flex items-center mt-1" role="alert">
                       <AlertCircle className="w-4 h-4 mr-1" />
                       {fieldErrors.fullName}
                     </p>
@@ -432,6 +434,8 @@ export default function RegisterPage() {
                       placeholder="Tu usuario de ACS Logística"
                       required
                       disabled={isLoading}
+                      aria-invalid={fieldErrors.email && touchedFields.email ? 'true' : 'false'}
+                      aria-describedby={fieldErrors.email && touchedFields.email ? 'email-error' : undefined}
                       className={`pl-11 h-12 text-base text-gray-900 block w-full rounded-full border shadow-sm focus:ring-2 focus:ring-accent-blue transition-all duration-200 ${
                         fieldErrors.email && touchedFields.email
                           ? 'border-border bg-red-50 focus:border-destructive'
@@ -440,7 +444,7 @@ export default function RegisterPage() {
                     />
                   </div>
                   {fieldErrors.email && touchedFields.email && (
-                    <p className="text-sm text-red-600 flex items-center mt-1">
+                    <p id="email-error" className="text-sm text-red-600 flex items-center mt-1" role="alert">
                       <AlertCircle className="w-4 h-4 mr-1" />
                       {fieldErrors.email}
                     </p>
@@ -466,6 +470,8 @@ export default function RegisterPage() {
                       placeholder="Contraseña"
                       required
                       disabled={isLoading}
+                      aria-invalid={fieldErrors.password && touchedFields.password ? 'true' : 'false'}
+                      aria-describedby={fieldErrors.password && touchedFields.password ? 'password-error' : undefined}
                       className={`pl-11 pr-12 h-12 text-base text-gray-900 block w-full rounded-full border shadow-sm focus:ring-2 focus:ring-accent-blue transition-all duration-200 ${
                         fieldErrors.password && touchedFields.password
                           ? 'border-border bg-red-50 focus:border-destructive'
@@ -513,7 +519,7 @@ export default function RegisterPage() {
                   )}
                   
                   {fieldErrors.password && touchedFields.password && (
-                    <p className="text-sm text-red-600 flex items-center mt-1">
+                    <p id="password-error" className="text-sm text-red-600 flex items-center mt-1" role="alert">
                       <AlertCircle className="w-4 h-4 mr-1" />
                       {fieldErrors.password}
                     </p>
@@ -539,6 +545,8 @@ export default function RegisterPage() {
                       placeholder="Repetir contraseña"
                       required
                       disabled={isLoading}
+                      aria-invalid={fieldErrors.confirmPassword && touchedFields.confirmPassword ? 'true' : 'false'}
+                      aria-describedby={fieldErrors.confirmPassword && touchedFields.confirmPassword ? 'confirmPassword-error' : undefined}
                       className={`pl-11 pr-12 h-12 text-base text-gray-900 block w-full rounded-full border shadow-sm focus:ring-2 focus:ring-accent-blue transition-all duration-200 ${
                         fieldErrors.confirmPassword && touchedFields.confirmPassword
                           ? 'border-border bg-red-50 focus:border-destructive'
@@ -565,7 +573,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
                   {fieldErrors.confirmPassword && touchedFields.confirmPassword && (
-                    <p className="text-sm text-red-600 flex items-center mt-1">
+                    <p id="confirmPassword-error" className="text-sm text-red-600 flex items-center mt-1" role="alert">
                       <AlertCircle className="w-4 h-4 mr-1" />
                       {fieldErrors.confirmPassword}
                     </p>

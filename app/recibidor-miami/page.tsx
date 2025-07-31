@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plane, Edit, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -14,6 +13,10 @@ import { SearchHero } from "@/components/recibidor-miami/SearchHero"
 import { SmartFilterBar } from "@/components/recibidor-miami/SmartFilterBar"
 import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
 import { format } from "date-fns"
+import { type PackageSearchResult, type SearchResult, useFastSearch } from "@/hooks/useFastSearch"
+
+// Constants
+const DEFAULT_PAGE_SIZE = 25
 
 // Types
 type FilterValue = string | number | Date | undefined
@@ -82,6 +85,9 @@ function RecibidorMiamiContent() {
   // UI state
   const [searchValue, setSearchValue] = useState("")
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
+  const [fastSearchResults, setFastSearchResults] = useState<PackageSearchResult[] | null>(null)
+  const [fastSearchMeta, setFastSearchMeta] = useState<SearchResult | null>(null)
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false)
   
   // Filter state
   const [filters, setFilters] = useState<PackageFilters>({
@@ -94,7 +100,7 @@ function RecibidorMiamiContent() {
     ciPaquete: "",
     desde: undefined,
     hasta: undefined,
-    elementosPorPagina: 25,
+    elementosPorPagina: DEFAULT_PAGE_SIZE,
     pagina: 1
   })
 
@@ -102,6 +108,9 @@ function RecibidorMiamiContent() {
   const [availableStates, setAvailableStates] = useState<string[]>([])
   const [availableCountries, setAvailableCountries] = useState<string[]>([])
   const [availableTarimas, setAvailableTarimas] = useState<string[]>([])
+
+  // Fast search hook
+  const { smartSearch } = useFastSearch()
 
   // Fetch packages function
   const fetchPackages = useCallback(async () => {
@@ -124,6 +133,10 @@ function RecibidorMiamiContent() {
       
       params.append('ElementosPorPagina', filters.elementosPorPagina.toString())
       params.append('Pagina', filters.pagina.toString())
+      
+      // Add sorting for most recent packages first
+      params.append('OrderBy', 'fecha')
+      params.append('SortDirection', 'desc')
 
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'
       const response = await fetch(`${apiBaseUrl}/api/Packages?${params.toString()}`)
@@ -140,7 +153,7 @@ function RecibidorMiamiContent() {
         
         // Show success toast only if it's not the initial load
         if (filters.pagina > 1 || Object.values(filters).some(value => 
-          value !== "" && value !== "all" && value !== undefined && value !== 25 && value !== 1)) {
+          value !== "" && value !== "all" && value !== undefined && value !== DEFAULT_PAGE_SIZE && value !== 1)) {
           toast({
             title: "Paquetes cargados",
             description: `Se encontraron ${data.totalCount.toLocaleString()} paquetes`,
@@ -243,7 +256,7 @@ function RecibidorMiamiContent() {
       ciPaquete: "",
       desde: undefined,
       hasta: undefined,
-      elementosPorPagina: 25,
+      elementosPorPagina: DEFAULT_PAGE_SIZE,
       pagina: 1
     })
     setSearchValue("")
@@ -261,21 +274,79 @@ function RecibidorMiamiContent() {
     } else if (key === 'estado' || key === 'pais' || key === 'numeroTarima') {
       handleFilterChange(key as keyof PackageFilters, 'all')
     } else if (key === 'elementosPorPagina') {
-      handleFilterChange(key as keyof PackageFilters, 25)
+      handleFilterChange(key as keyof PackageFilters, DEFAULT_PAGE_SIZE)
     } else {
       handleFilterChange(key as keyof PackageFilters, '')
     }
   }
   
+  // Fast search handler - receives results from SearchHero component
+  const handleFastSearchResult = useCallback((results: PackageSearchResult[], searchMeta?: SearchResult) => {
+    setFastSearchResults(results)
+    setFastSearchMeta(searchMeta || null)
+    // Clear regular search filters when using fast search
+    setFilters(prev => ({
+      ...prev,
+      buscarPorTracking: "",
+      buscarPorCliente: "",
+      pagina: 1
+    }))
+  }, [])
+
+  // Handle pagination for fast search results
+  const handleFastSearchPageChange = useCallback(async (newPage: number) => {
+    if (!fastSearchMeta) {
+      console.error('No fastSearchMeta available for pagination')
+      return
+    }
+    
+    // Don't reload the same page
+    if (newPage === fastSearchMeta.currentPage) return
+    
+    console.log(`Paginating to page ${newPage} for query: ${fastSearchMeta.query}`)
+    
+    setIsPaginationLoading(true)
+    
+    try {
+      // Use smartSearch directly with the current query and new page
+      const results = await smartSearch(fastSearchMeta.query, newPage, fastSearchMeta.pageSize)
+      if (results) {
+        console.log(`Got ${results.results.length} results for page ${newPage}`)
+        setFastSearchResults(results.results)
+        setFastSearchMeta(results)
+      } else {
+        console.error('No results returned from smartSearch')
+      }
+    } catch (error) {
+      console.error('Fast search pagination error:', error)
+      // Show error toast
+      toast({
+        variant: "destructive",
+        title: "Error al cambiar página",
+        description: "No se pudo cargar la página solicitada",
+      })
+    } finally {
+      setIsPaginationLoading(false)
+    }
+  }, [fastSearchMeta, smartSearch, toast])
+
   // Search handlers
   const handleSearchChange = (value: string) => {
     setSearchValue(value)
-    // Debounced search - update filters after user stops typing
-    if (searchTimeout) clearTimeout(searchTimeout)
-    const timeout = setTimeout(() => {
-      handleFilterChange('buscarPorTracking', value)
-    }, 500)
-    setSearchTimeout(timeout)
+    // Clear fast search results when search is empty
+    if (!value.trim()) {
+      setFastSearchResults(null)
+      setFastSearchMeta(null)
+      setIsPaginationLoading(false)
+    }
+    // Debounced search - update filters after user stops typing (only if no fast search results)
+    if (!fastSearchResults) {
+      if (searchTimeout) clearTimeout(searchTimeout)
+      const timeout = setTimeout(() => {
+        handleFilterChange('buscarPorTracking', value)
+      }, 500)
+      setSearchTimeout(timeout)
+    }
   }
   
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
@@ -328,7 +399,7 @@ function RecibidorMiamiContent() {
     if (filters.guiaAerea && filters.guiaAerea.trim()) count++
     if (filters.buscarPorCliente && filters.buscarPorCliente.trim()) count++
     if (filters.ciPaquete && filters.ciPaquete.trim()) count++
-    if (filters.elementosPorPagina !== 25) count++
+    if (filters.elementosPorPagina !== DEFAULT_PAGE_SIZE) count++
     return count
   }
 
@@ -359,21 +430,6 @@ function RecibidorMiamiContent() {
     }
   }
 
-  // Status badge styling
-  const getStatusBadge = (estado: string) => {
-    const statusStyles: Record<string, string> = {
-      'Prealertado': 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
-      'Recibido': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-      'Procesando': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
-      'Enviado': 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
-    }
-
-    return (
-      <Badge className={statusStyles[estado] || 'bg-gray-100 text-gray-800'}>
-        {estado}
-      </Badge>
-    )
-  }
 
   const totalPages = Math.ceil(totalCount / filters.elementosPorPagina)
   const startItem = (filters.pagina - 1) * filters.elementosPorPagina + 1
@@ -388,7 +444,11 @@ function RecibidorMiamiContent() {
           Recibidor de Miami
         </h1>
         <p className="text-muted-foreground">
-          Mostrando {startItem} - {endItem} de {totalCount} paquetes
+          {fastSearchResults && fastSearchMeta ? (
+            `Mostrando ${((fastSearchMeta.currentPage - 1) * fastSearchMeta.pageSize) + 1} - ${((fastSearchMeta.currentPage - 1) * fastSearchMeta.pageSize) + fastSearchResults.length} de ${fastSearchMeta.totalAvailable?.toLocaleString() || 0} resultados`
+          ) : (
+            `Mostrando ${startItem} - ${endItem} de ${totalCount} paquetes`
+          )}
         </p>
       </div>
 
@@ -397,8 +457,9 @@ function RecibidorMiamiContent() {
         searchValue={searchValue}
         onSearchChange={handleSearchChange}
         onQuickFilter={handleQuickFilter}
+        onFastSearchResult={handleFastSearchResult}
         isLoading={loading}
-        resultsCount={totalCount}
+        resultsCount={fastSearchMeta?.totalAvailable || totalCount}
       />
 
       {/* Smart Filter Bar */}
@@ -411,7 +472,7 @@ function RecibidorMiamiContent() {
         }}
         availableStates={availableStates}
         availableCountries={availableCountries}
-        onFilterChange={(key, value) => handleFilterChange(key, value)}
+        onFilterChange={(key, value) => handleFilterChange(key as keyof PackageFilters, value)}
         onClearFilter={clearFilter}
         onClearAll={clearFilters}
         onShowAdvanced={() => setIsAdvancedOpen(!isAdvancedOpen)}
@@ -437,7 +498,7 @@ function RecibidorMiamiContent() {
           elementosPorPagina: filters.elementosPorPagina
         }}
         availableTarimas={availableTarimas}
-        onFilterChange={(key, value) => handleFilterChange(key, value)}
+        onFilterChange={(key, value) => handleFilterChange(key as keyof PackageFilters, value)}
         onClearFilter={clearFilter}
         isOpen={isAdvancedOpen}
         onToggle={() => setIsAdvancedOpen(!isAdvancedOpen)}
@@ -545,9 +606,9 @@ function RecibidorMiamiContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {(loading || isPaginationLoading) ? (
                   // Loading skeletons
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: isPaginationLoading ? (fastSearchMeta?.pageSize || DEFAULT_PAGE_SIZE) : 5 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-4 w-4" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
@@ -564,14 +625,17 @@ function RecibidorMiamiContent() {
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     </TableRow>
                   ))
-                ) : packages.length === 0 ? (
+                ) : (fastSearchResults || packages).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
-                      No se encontraron paquetes con los filtros aplicados
+                      {fastSearchResults ? 
+                        "No se encontraron resultados para tu búsqueda" : 
+                        "No se encontraron paquetes con los filtros aplicados"
+                      }
                     </TableCell>
                   </TableRow>
                 ) : (
-                  packages.map((pkg) => (
+                  (fastSearchResults || packages).map((pkg) => (
                     <TableRow key={pkg.nid}>
                       <TableCell>
                         <Checkbox
@@ -591,7 +655,7 @@ function RecibidorMiamiContent() {
                       </TableCell>
                       <TableCell>{pkg.totalAPagar}</TableCell>
                       <TableCell>{pkg.peso}</TableCell>
-                      <TableCell>{getStatusBadge(pkg.estado)}</TableCell>
+                      <TableCell>{pkg.estado}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
@@ -609,8 +673,77 @@ function RecibidorMiamiContent() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
+          {/* Fast Search Pagination */}
+          {fastSearchResults && fastSearchMeta && (fastSearchMeta.hasNextPage || fastSearchMeta.hasPreviousPage) && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>Página {fastSearchMeta.currentPage} de {Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)} • Búsqueda rápida</span>
+                {isPaginationLoading && (
+                  <div className="animate-spin h-4 w-4 border-2 border-accent-blue border-t-transparent rounded-full"></div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleFastSearchPageChange(fastSearchMeta.currentPage - 1)}
+                  disabled={!fastSearchMeta.hasPreviousPage || isPaginationLoading}
+                  className="rounded-full"
+                >
+                  Anterior
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const totalPages = Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)
+                    const currentPage = fastSearchMeta.currentPage
+                    const maxButtons = 5
+                    
+                    // Calculate start and end page numbers to show
+                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2))
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1)
+                    
+                    // Adjust start if we're near the end
+                    if (endPage - startPage + 1 < maxButtons) {
+                      startPage = Math.max(1, endPage - maxButtons + 1)
+                    }
+                    
+                    const pages = []
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(i)
+                    }
+                    
+                    return pages.map(pageNum => (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleFastSearchPageChange(pageNum)}
+                        disabled={isPaginationLoading}
+                        className="w-8 h-8 rounded-full"
+                      >
+                        {pageNum}
+                      </Button>
+                    ))
+                  })()}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleFastSearchPageChange(fastSearchMeta.currentPage + 1)}
+                  disabled={!fastSearchMeta.hasNextPage || isPaginationLoading}
+                  className="rounded-full"
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Regular Pagination - Hide when showing fast search results */}
+          {!fastSearchResults && totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
                 Mostrando {startItem} a {endItem} de {totalCount} resultados

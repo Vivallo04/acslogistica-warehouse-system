@@ -24,6 +24,15 @@ import { cn } from "@/lib/utils"
 
 type FilterValue = string | number | Date | undefined
 
+// Helper function to format country names for display
+function formatCountryName(country: string): string {
+  const countryMap: Record<string, string> = {
+    'colombia': 'Colombia',
+    'estados_unidos': 'Estados Unidos'
+  }
+  return countryMap[country] || country.charAt(0).toUpperCase() + country.slice(1)
+}
+
 interface SmartFilterBarProps {
   filters: {
     estado: string
@@ -163,11 +172,9 @@ export function SmartFilterBar({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los países</SelectItem>
-                <SelectItem value="Colombia">Colombia</SelectItem>
-                <SelectItem value="Estados Unidos">Estados Unidos</SelectItem>
-                {/* Dynamic countries from API */}
-                {availableCountries.filter(country => !['Colombia', 'Estados Unidos'].includes(country)).map(country => (
-                  <SelectItem key={country} value={country}>{country}</SelectItem>
+                {/* Dynamic countries from API with proper formatting */}
+                {availableCountries.map(country => (
+                  <SelectItem key={country} value={country}>{formatCountryName(country)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -385,6 +392,7 @@ export function SmartFilterBar({
               onClear={() => onClearFilter('pais')}
               icon={MapPin}
               isActive={isPaisActive}
+              displayValue={filters.pais !== 'all' ? formatCountryName(filters.pais) : undefined}
             />
             
             <FilterChip

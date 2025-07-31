@@ -49,31 +49,36 @@ export function SessionHistory({
   const exportToCSV = () => {
     if (packages.length === 0) return
 
-    const headers = ['Tracking', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
-    const csvContent = [
-      headers.join(','),
-      ...packages.map(pkg => [
-        `"${pkg.numeroTracking}"`,
-        `"${pkg.numeroCasillero}"`,
-        `"${pkg.contenido}"`,
-        `"${pkg.peso}"`,
-        `"${pkg.numeroTarima}"`,
-        `"${pkg.estado}"`,
-        `"${format(pkg.timestamp, 'HH:mm:ss', { locale: es })}"`
-      ].join(','))
-    ].join('\n')
+    try {
+      const headers = ['Tracking', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
+      const csvContent = [
+        headers.join(','),
+        ...packages.map(pkg => [
+          `"${pkg.numeroTracking.replace(/"/g, '""')}"`,
+          `"${pkg.numeroCasillero.replace(/"/g, '""')}"`,
+          `"${pkg.contenido.replace(/"/g, '""')}"`,
+          `"${pkg.peso.replace(/"/g, '""')}"`,
+          `"${pkg.numeroTarima.replace(/"/g, '""')}"`,
+          `"${pkg.estado.replace(/"/g, '""')}"`,
+          `"${format(pkg.timestamp, 'HH:mm:ss', { locale: es })}"`
+        ].join(','))
+      ].join('\n')
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `preregistro-session-${format(new Date(), 'yyyyMMdd-HHmmss')}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    onExportSession()
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `preregistro-session-${format(new Date(), 'yyyyMMdd-HHmmss')}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      onExportSession()
+    } catch (error) {
+      console.error('Error exporting CSV:', error)
+      // Could add toast notification here for error feedback
+    }
   }
 
   if (packages.length === 0) {

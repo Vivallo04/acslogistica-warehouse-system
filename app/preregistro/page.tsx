@@ -168,7 +168,7 @@ function PreRegistroContent() {
       Sentry.captureException(error, {
         tags: {
           section: 'preregistro-submit',
-          tracking: formData.numeroTracking
+          hasTracking: !!formData.numeroTracking.trim()
         }
       })
       toast({

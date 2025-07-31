@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,6 +30,22 @@ export function CIDocumentViewer({
 }: CIDocumentViewerProps) {
   const [zoom, setZoom] = useState(100)
   const [rotation, setRotation] = useState(0)
+  const [fileSize, setFileSize] = useState<string>('')
+
+  // Calculate file size dynamically
+  useEffect(() => {
+    if (pdfUrl) {
+      fetch(pdfUrl, { method: 'HEAD' })
+        .then(response => {
+          const size = response.headers.get('content-length')
+          if (size) {
+            const sizeInKB = Math.round(parseInt(size) / 1024)
+            setFileSize(`${sizeInKB} KB`)
+          }
+        })
+        .catch(() => setFileSize('Unknown'))
+    }
+  }, [pdfUrl])
 
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 25, 200))
@@ -207,7 +223,7 @@ export function CIDocumentViewer({
           
           {pdfUrl && (
             <div className="text-xs">
-              Tamaño: 234 KB
+              Tamaño: {fileSize || 'Calculating...'}
             </div>
           )}
         </div>

@@ -261,7 +261,7 @@ export function AIContentScanner({ onContentGenerated, disabled = false }: AICon
           {/* Camera View */}
           {isCapturing && !capturedImage && (
             <div className="space-y-4">
-              <div className="relative bg−muted rounded-lg overflow-hidden">
+              <div className="relative bg-muted rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
                   autoPlay

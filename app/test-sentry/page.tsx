@@ -179,9 +179,9 @@ function TestSentryContent() {
                 }, async () => {
                   Sentry.setTag('db.operation', 'package-fetch')
                   Sentry.setContext('database', {
-                    host: 'localhost',
-                    port: 3306,
-                    database: 'acslogistica_drupal'
+                    type: 'mysql',
+                    operation: 'connection_test',
+                    environment: 'test'
                   })
                   setHasSentError(true)
                   throw new WMSTestError("Error conectando a MySQL - Conexión rechazada en puerto 3306")

@@ -41,7 +41,7 @@ export default function LoginPage() {
         Sentry.captureException(error, {
           tags: {
             section: 'login-form',
-            email: email
+            userType: email.includes('@') ? 'corporate' : 'unknown'
           }
         })
         setError(error.message || 'Error de autenticación desconocido')

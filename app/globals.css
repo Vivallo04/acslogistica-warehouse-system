@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode - using #f2f2f9 as base */
+    --background: 240 25% 96%; /* #f2f2f9 */
+    --foreground: 240 6% 11%; /* Dark text for contrast */
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 240 6% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 11%;
+    --primary: 197 78% 49%; /* #19b2e4 accent color */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 20% 92%; /* Slightly darker than background */
+    --secondary-foreground: 240 6% 11%;
+    --muted: 240 15% 88%; /* Muted backgrounds */
+    --muted-foreground: 240 4% 46%; /* Muted text */
+    --accent: 197 78% 49%; /* #19b2e4 accent color */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 15% 85%; /* Subtle borders */
+    --input: 240 15% 85%;
+    --ring: 197 78% 49%; /* #19b2e4 focus rings */
+    --radius: 0.5rem;
+    --chart-1: 197 78% 49%; /* #19b2e4 */
+    --chart-2: 142.1 76.2% 36.3%;
+    --chart-3: 38.4 92.1% 50.2%;
+    --chart-4: 0 84.2% 60.2%;
+    --chart-5: 270 95% 75%;
+    /* Semantic status colors */
+    --success: 142.1 76.2% 36.3%; /* Green */
+    --warning: 38.4 92.1% 50.2%; /* Orange */
+    --error: 0 84.2% 60.2%; /* Red */
+    --info: 197 78% 49%; /* Accent blue */
+  }
+
+  .dark {
+    /* Dark mode - using neutral dark for main bg, #1c1c1e for cards */
+    --background: 240 6% 8%; /* Darker neutral background */
+    --foreground: 0 0% 95%; /* Light text */
+    --card: 240 6% 11%; /* #1c1c1e - normal contrast for cards */
+    --card-foreground: 0 0% 95%;
+    --popover: 240 6% 11%; /* #1c1c1e - normal contrast for popovers */
+    --popover-foreground: 0 0% 95%;
+    --primary: 197 78% 49%; /* #19b2e4 accent color (same) */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 6% 18%; /* Subtle secondary */
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 6% 18%; /* Muted backgrounds */
+    --muted-foreground: 0 0% 65%; /* Muted text */
+    --accent: 197 78% 49%; /* #19b2e4 accent color (same) */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 20%; /* Subtle borders */
+    --input: 240 6% 20%;
+    --ring: 197 78% 49%; /* #19b2e4 focus rings */
+    --chart-1: 197 78% 49%; /* #19b2e4 */
+    --chart-2: 160 60% 50%;
+    --chart-3: 30 80% 60%;
+    --chart-4: 280 65% 65%;
+    --chart-5: 340 75% 60%;
+    /* Semantic status colors - dark mode */
+    --success: 142.1 70% 45%; /* Slightly brighter green for dark */
+    --warning: 38.4 85% 55%; /* Slightly brighter orange for dark */
+    --error: 0 75% 55%; /* Slightly brighter red for dark */
+    --info: 197 78% 49%; /* Same accent blue */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Mobile preview frame styling */
+.mobile-frame {
+  background: linear-gradient(145deg, #f0f0f0, #ffffff);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Status badge animations */
+@keyframes pulse-success {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.status-success {
+  animation: pulse-success 2s infinite;
+}
+
+/* Loading skeleton */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.1) 50%, hsl(var(--muted)) 75%);
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s infinite;
+}

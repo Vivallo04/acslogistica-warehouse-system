@@ -82,7 +82,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // For any other routes, allow access (catch-all)
+  // For undefined routes, default to protected (secure by default)
+  // This ensures any new routes require explicit classification to avoid accidental exposure
+  const authResult = await validateAuthFromCookies(request)
+  
+  if (!authResult.valid) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[MIDDLEWARE] Unauthorized access to undefined route ${pathname}: ${authResult.error}`)
+    }
+    
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('returnUrl', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[MIDDLEWARE] Authorized access to undefined route ${pathname} by ${authResult.user?.email}`)
+  }
+
   return NextResponse.next()
 }
 

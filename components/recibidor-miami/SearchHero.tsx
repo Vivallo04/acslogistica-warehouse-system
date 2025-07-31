@@ -69,7 +69,6 @@ export function SearchHero({
   const [searchFocused, setSearchFocused] = useState(false)
 
   const handleQuickAction = (action: QuickAction) => {
-    console.log(`Quick action clicked: ${action.label}`, { filterType: action.filterType, filterValue: action.filterValue })
     onQuickFilter(action.filterType, action.filterValue)
   }
 

@@ -19,6 +19,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+type FilterValue = string | number | Date
+
 interface AdvancedFiltersProps {
   filters: {
     numeroTarima: string
@@ -29,7 +31,7 @@ interface AdvancedFiltersProps {
     elementosPorPagina: number
   }
   availableTarimas: string[]
-  onFilterChange: (key: string, value: any) => void
+  onFilterChange: (key: keyof AdvancedFiltersProps['filters'], value: FilterValue) => void
   onClearFilter: (key: string) => void
   isOpen: boolean
   onToggle: () => void

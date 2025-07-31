@@ -16,6 +16,7 @@ import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
 import { format } from "date-fns"
 
 // Types
+type FilterValue = string | number | Date
 interface PackageData {
   nid: number
   fecha: string
@@ -218,7 +219,7 @@ function RecibidorMiamiContent() {
   }, [fetchPackages])
 
   // Filter handlers
-  const handleFilterChange = (key: keyof PackageFilters, value: any) => {
+  const handleFilterChange = (key: keyof PackageFilters, value: FilterValue) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
@@ -417,7 +418,7 @@ function RecibidorMiamiContent() {
         }}
         availableStates={availableStates}
         availableCountries={availableCountries}
-        onFilterChange={(key: string, value: any) => handleFilterChange(key as keyof PackageFilters, value)}
+        onFilterChange={(key, value) => handleFilterChange(key, value)}
         onClearFilter={clearFilter}
         onClearAll={clearFilters}
         onShowAdvanced={() => setIsAdvancedOpen(!isAdvancedOpen)}
@@ -443,7 +444,7 @@ function RecibidorMiamiContent() {
           elementosPorPagina: filters.elementosPorPagina
         }}
         availableTarimas={availableTarimas}
-        onFilterChange={(key: string, value: any) => handleFilterChange(key as keyof PackageFilters, value)}
+        onFilterChange={(key, value) => handleFilterChange(key, value)}
         onClearFilter={clearFilter}
         isOpen={isAdvancedOpen}
         onToggle={() => setIsAdvancedOpen(!isAdvancedOpen)}

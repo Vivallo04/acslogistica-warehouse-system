@@ -285,7 +285,8 @@ export function SmartFilterBar({
                       variant="outline"
                       onClick={() => {
                         const today = new Date()
-                        const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
+                        const monthAgo = new Date(today)
+                        monthAgo.setMonth(monthAgo.getMonth() - 1)
                         onFilterChange('desde', monthAgo)
                         onFilterChange('hasta', today)
                       }}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,15 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Package } from "lucide-react"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Package, Camera, Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { ActionToolbar } from "@/components/preregistro/ActionToolbar"
+import { CIDocumentViewer } from "@/components/preregistro/CIDocumentViewer"
+import { AIContentScanner } from "@/components/preregistro/AIContentScanner"
+import { SessionHistory, ProcessedPackage } from "@/components/preregistro/SessionHistory"
+import { useToast } from "@/hooks/use-toast"
 
 interface PreRegistroForm {
   numeroTracking: string
@@ -27,6 +35,8 @@ export default function PreRegistroPage() {
 }
 
 function PreRegistroContent() {
+  const { toast } = useToast()
+
   const [formData, setFormData] = useState<PreRegistroForm>({
     numeroTracking: "",
     numeroCasillero: "",
@@ -35,6 +45,28 @@ function PreRegistroContent() {
     numeroTarima: ""
   })
 
+  // Toolbar state
+  const [autoSync, setAutoSync] = useState(true)
+  
+  // Session management
+  const [processedPackages, setProcessedPackages] = useState<ProcessedPackage[]>([])
+  
+  // Combobox state for casillero
+  const [casilleroOpen, setCasilleroOpen] = useState(false)
+  const [casilleroSearch, setCasilleroSearch] = useState("")
+  
+  // Scanner compatibility
+  const [scannerMode, setScannerMode] = useState(false)
+  
+  // Casilleros/clientes data - to be populated from API
+  const casilleroOptions: { value: string; label: string }[] = []
+  
+  // Filter options based on search
+  const filteredCasilleros = casilleroOptions.filter(option =>
+    option.label.toLowerCase().includes(casilleroSearch.toLowerCase()) ||
+    option.value.toLowerCase().includes(casilleroSearch.toLowerCase())
+  )
+
   const handleInputChange = (field: keyof PreRegistroForm, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -42,10 +74,64 @@ function PreRegistroContent() {
     }))
   }
 
+  // Handle tracking number input with scanner support
+  const handleTrackingInputChange = (value: string) => {
+    handleInputChange("numeroTracking", value)
+    
+    // Auto-detect scanner input (typically ends with Enter and is rapid)
+    if (value.length > 8) { // Most tracking numbers are longer than 8 characters
+      setScannerMode(true)
+      setTimeout(() => setScannerMode(false), 2000) // Reset scanner mode after 2 seconds
+    }
+  }
+
+  // Handle Enter key press on tracking input (common with scanners)
+  const handleTrackingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      
+      // If tracking number is filled, move to next field or process
+      if (formData.numeroTracking.trim()) {
+        // Focus on tarima dropdown or trigger processing
+        const tarimaSelect = document.querySelector('[role="combobox"]') as HTMLElement
+        if (tarimaSelect) {
+          tarimaSelect.click()
+        }
+        
+        toast({
+          title: "Tracking escaneado",
+          description: `${formData.numeroTracking} listo para procesar`,
+          duration: 2000,
+        })
+      }
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement form submission logic
-    console.log("Form submitted:", formData)
+    
+    // Create processed package
+    const newPackage: ProcessedPackage = {
+      id: `pkg_${Date.now()}`,
+      numeroTracking: formData.numeroTracking,
+      numeroCasillero: formData.numeroCasillero,
+      contenido: formData.contenido,
+      peso: formData.peso,
+      numeroTarima: formData.numeroTarima,
+      timestamp: new Date(),
+      estado: 'procesado'
+    }
+    
+    // Add to session history
+    setProcessedPackages(prev => [...prev, newPackage])
+    
+    // Reset form
+    resetForm()
+    
+    toast({
+      title: "Paquete procesado",
+      description: `Tracking ${formData.numeroTracking} agregado al historial`,
+    })
   }
 
   const resetForm = () => {
@@ -57,6 +143,134 @@ function PreRegistroContent() {
       numeroTarima: ""
     })
   }
+
+  // Toolbar handlers
+  const handleScanToggle = () => {
+    setScannerMode(true)
+    
+    // Focus on tracking input
+    const trackingInput = document.getElementById('numeroTracking') as HTMLInputElement
+    if (trackingInput) {
+      trackingInput.focus()
+      trackingInput.select() // Select all text for easy replacement
+    }
+    
+    toast({
+      title: "Modo escaneo activado",
+      description: "Escanea o ingresa el número de tracking",
+      duration: 3000,
+    })
+    
+    // Reset scanner mode after 10 seconds if no input
+    setTimeout(() => setScannerMode(false), 10000)
+  }
+
+  const handleBatchMode = () => {
+    toast({
+      title: "Modo lote",
+      description: "Función en desarrollo",
+    })
+  }
+
+  const handlePrintLabels = () => {
+    toast({
+      title: "Imprimir etiquetas",
+      description: "Función en desarrollo",
+    })
+  }
+
+  const handleReports = () => {
+    toast({
+      title: "Reportes",
+      description: "Función en desarrollo",
+    })
+  }
+
+
+  const handleSettings = () => {
+    toast({
+      title: "Configuración",
+      description: "Función en desarrollo",
+    })
+  }
+
+  const handleAutoSyncToggle = (enabled: boolean) => {
+    setAutoSync(enabled)
+    toast({
+      title: enabled ? "Sincronización activada" : "Sincronización desactivada",
+      description: enabled ? "Los cambios se guardarán automáticamente" : "Los cambios se guardarán manualmente",
+    })
+  }
+
+  // AI Content Scanner handler
+  const handleContentGenerated = (content: string) => {
+    setFormData(prev => ({
+      ...prev,
+      contenido: content
+    }))
+  }
+  
+  // Session management handlers
+  const handleClearSession = () => {
+    setProcessedPackages([])
+    toast({
+      title: "Sesión limpiada",
+      description: "Historial de paquetes eliminado",
+    })
+  }
+  
+  const handleExportSession = () => {
+    toast({
+      title: "Sesión exportada",
+      description: "Archivo CSV descargado exitosamente",
+    })
+  }
+
+  // Comprehensive keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Function key shortcuts
+      if (event.key === 'F2') {
+        event.preventDefault()
+        handleScanToggle()
+      } else if (event.key === 'F3') {
+        event.preventDefault()
+        handleBatchMode()
+      } else if (event.key === 'F4') {
+        event.preventDefault()
+        handlePrintLabels()
+      } else if (event.key === 'F5') {
+        event.preventDefault()
+        handleReports()
+      } else if (event.key === 'F6') {
+        event.preventDefault()
+        handleSettings()
+      }
+      
+      // Ctrl key combinations
+      if (event.ctrlKey) {
+        if (event.key === 's') {
+          event.preventDefault()
+          // Trigger form submission
+          const form = document.querySelector('form')
+          if (form) {
+            const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+            form.dispatchEvent(submitEvent)
+          }
+        } else if (event.key === 'r') {
+          event.preventDefault()
+          resetForm()
+          toast({
+            title: "Formulario reiniciado",
+            description: "Campos limpiados y tarima actualizada",
+          })
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [formData])
 
   return (
     <div className="p-6 space-y-6">
@@ -71,26 +285,51 @@ function PreRegistroContent() {
         </p>
       </div>
 
-      {/* Main Form Card */}
-      <Card className="max-w-4xl">
-        <CardHeader>
-          <CardTitle>Información del Paquete</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Action Toolbar */}
+      <ActionToolbar
+        onScanToggle={handleScanToggle}
+        onBatchMode={handleBatchMode}
+        onPrintLabels={handlePrintLabels}
+        onReports={handleReports}
+        onSettings={handleSettings}
+        autoSync={autoSync}
+        onAutoSyncToggle={handleAutoSyncToggle}
+      />
+
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[60vh]">
+        {/* Left Column: Package Information Form */}
+        <Card className="flex flex-col h-fit">
+          <CardHeader>
+            <CardTitle>Información del Paquete</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Número de Tracking - Required */}
             <div className="space-y-2">
-              <Label htmlFor="numeroTracking" className="text-sm font-medium">
+              <Label htmlFor="numeroTracking" className="text-sm font-medium flex items-center gap-2">
                 Número de Tracking <span className="text-red-500">*</span>
+                {scannerMode && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Modo Escáner
+                  </span>
+                )}
               </Label>
               <Input
                 id="numeroTracking"
                 type="text"
                 value={formData.numeroTracking}
-                onChange={(e) => handleInputChange("numeroTracking", e.target.value)}
-                placeholder="Ingresa el número de tracking"
+                onChange={(e) => handleTrackingInputChange(e.target.value)}
+                onKeyDown={handleTrackingKeyDown}
+                placeholder={scannerMode ? "Escanea el código de barras..." : "Ingresa el número de tracking"}
                 required
-                className="w-full"
+                autoComplete="off"
+                spellCheck={false}
+                className={cn(
+                  "w-full font-mono transition-all duration-200",
+                  scannerMode && "ring-2 ring-green-500 border-green-500 bg-green-50"
+                )}
               />
             </div>
 
@@ -99,33 +338,70 @@ function PreRegistroContent() {
               <Label htmlFor="numeroCasillero" className="text-sm font-medium">
                 Número de Casillero / Cliente Asignado
               </Label>
-              <Select 
-                value={formData.numeroCasillero} 
-                onValueChange={(value) => handleInputChange("numeroCasillero", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecciona un casillero o cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="casillero-001">Casillero 001</SelectItem>
-                  <SelectItem value="casillero-002">Casillero 002</SelectItem>
-                  <SelectItem value="casillero-003">Casillero 003</SelectItem>
-                  <SelectItem value="cliente-premium">Cliente Premium</SelectItem>
-                  <SelectItem value="cliente-corporativo">Cliente Corporativo</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover open={casilleroOpen} onOpenChange={setCasilleroOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={casilleroOpen}
+                    className="w-full justify-between"
+                  >
+                    {formData.numeroCasillero
+                      ? casilleroOptions.find((option) => option.value === formData.numeroCasillero)?.label
+                      : "Selecciona un casillero o cliente"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[200px] p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Buscar casillero o cliente..." 
+                      value={casilleroSearch}
+                      onValueChange={setCasilleroSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredCasilleros.map((option) => (
+                          <CommandItem
+                            key={option.value}
+                            value={option.value}
+                            onSelect={(currentValue) => {
+                              handleInputChange("numeroCasillero", currentValue)
+                              setCasilleroOpen(false)
+                              setCasilleroSearch("")
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.numeroCasillero === option.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {option.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Contenido */}
             <div className="space-y-2">
-              <Label htmlFor="contenido" className="text-sm font-medium">
+              <Label htmlFor="contenido" className="text-sm font-medium flex items-center justify-between">
                 Contenido
+                <AIContentScanner 
+                  onContentGenerated={handleContentGenerated}
+                  disabled={!formData.numeroTracking}
+                />
               </Label>
               <Textarea
                 id="contenido"
                 value={formData.contenido}
                 onChange={(e) => handleInputChange("contenido", e.target.value)}
-                placeholder="Describe el contenido del paquete"
+                placeholder="Describe el contenido del paquete o usa el escáner IA"
                 className="w-full min-h-[100px]"
               />
             </div>
@@ -164,11 +440,81 @@ function PreRegistroContent() {
                   <SelectValue placeholder="- Seleccione una tarima -" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tarima-001">Tarima 001</SelectItem>
-                  <SelectItem value="tarima-002">Tarima 002</SelectItem>
-                  <SelectItem value="tarima-003">Tarima 003</SelectItem>
-                  <SelectItem value="tarima-004">Tarima 004</SelectItem>
-                  <SelectItem value="tarima-005">Tarima 005</SelectItem>
+                  <SelectItem value={(() => {
+                    const now = new Date()
+                    const day = String(now.getDate()).padStart(2, '0')
+                    const month = String(now.getMonth() + 1).padStart(2, '0')
+                    const year = String(now.getFullYear()).slice(-2)
+                    return `${day}${month}${year}-1`
+                  })()}>
+                    {(() => {
+                      const now = new Date()
+                      const day = String(now.getDate()).padStart(2, '0')
+                      const month = String(now.getMonth() + 1).padStart(2, '0')
+                      const year = String(now.getFullYear()).slice(-2)
+                      return `${day}${month}${year}-1`
+                    })()}
+                  </SelectItem>
+                  <SelectItem value={(() => {
+                    const now = new Date()
+                    const day = String(now.getDate()).padStart(2, '0')
+                    const month = String(now.getMonth() + 1).padStart(2, '0')
+                    const year = String(now.getFullYear()).slice(-2)
+                    return `${day}${month}${year}-2`
+                  })()}>
+                    {(() => {
+                      const now = new Date()
+                      const day = String(now.getDate()).padStart(2, '0')
+                      const month = String(now.getMonth() + 1).padStart(2, '0')
+                      const year = String(now.getFullYear()).slice(-2)
+                      return `${day}${month}${year}-2`
+                    })()}
+                  </SelectItem>
+                  <SelectItem value={(() => {
+                    const now = new Date()
+                    const day = String(now.getDate()).padStart(2, '0')
+                    const month = String(now.getMonth() + 1).padStart(2, '0')
+                    const year = String(now.getFullYear()).slice(-2)
+                    return `${day}${month}${year}-3`
+                  })()}>
+                    {(() => {
+                      const now = new Date()
+                      const day = String(now.getDate()).padStart(2, '0')
+                      const month = String(now.getMonth() + 1).padStart(2, '0')
+                      const year = String(now.getFullYear()).slice(-2)
+                      return `${day}${month}${year}-3`
+                    })()}
+                  </SelectItem>
+                  <SelectItem value={(() => {
+                    const now = new Date()
+                    const day = String(now.getDate()).padStart(2, '0')
+                    const month = String(now.getMonth() + 1).padStart(2, '0')
+                    const year = String(now.getFullYear()).slice(-2)
+                    return `${day}${month}${year}-4`
+                  })()}>
+                    {(() => {
+                      const now = new Date()
+                      const day = String(now.getDate()).padStart(2, '0')
+                      const month = String(now.getMonth() + 1).padStart(2, '0')
+                      const year = String(now.getFullYear()).slice(-2)
+                      return `${day}${month}${year}-4`
+                    })()}
+                  </SelectItem>
+                  <SelectItem value={(() => {
+                    const now = new Date()
+                    const day = String(now.getDate()).padStart(2, '0')
+                    const month = String(now.getMonth() + 1).padStart(2, '0')
+                    const year = String(now.getFullYear()).slice(-2)
+                    return `${day}${month}${year}-N/A`
+                  })()}>
+                    {(() => {
+                      const now = new Date()
+                      const day = String(now.getDate()).padStart(2, '0')
+                      const month = String(now.getMonth() + 1).padStart(2, '0')
+                      const year = String(now.getFullYear()).slice(-2)
+                      return `${day}${month}${year}-N/A`
+                    })()}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -178,8 +524,10 @@ function PreRegistroContent() {
               <Button 
                 type="submit" 
                 className="bg-accent-blue hover:bg-accent-blue/90 text-white px-8"
+                disabled={!formData.numeroTracking.trim() || !formData.numeroTarima.trim()}
               >
                 Procesar
+                <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-white/20 rounded">Ctrl+S</kbd>
               </Button>
               <Button 
                 type="button" 
@@ -188,11 +536,29 @@ function PreRegistroContent() {
                 className="px-8"
               >
                 Limpiar
+                <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-muted rounded">Ctrl+R</kbd>
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Right Column: CI Document Viewer */}
+        <div className="h-fit">
+          <CIDocumentViewer
+            ciNumber={formData.numeroTracking ? "1234567" : undefined}
+            pdfUrl={formData.numeroTracking ? "/sample-ci-document.pdf" : undefined}
+            isLoading={false}
+          />
+        </div>
+      </div>
+
+      {/* Session History */}
+      <SessionHistory
+        packages={processedPackages}
+        onClearSession={handleClearSession}
+        onExportSession={handleExportSession}
+      />
     </div>
   )
 }

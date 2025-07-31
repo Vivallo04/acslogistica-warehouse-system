@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,9 @@ import { ActionToolbar } from "@/components/preregistro/ActionToolbar"
 import { CIDocumentViewer } from "@/components/preregistro/CIDocumentViewer"
 import { AIContentScanner } from "@/components/preregistro/AIContentScanner"
 import { SessionHistory, ProcessedPackage } from "@/components/preregistro/SessionHistory"
+import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { useToast } from "@/hooks/use-toast"
+import * as Sentry from "@sentry/nextjs"
 
 interface PreRegistroForm {
   numeroTracking: string
@@ -26,16 +28,42 @@ interface PreRegistroForm {
   numeroTarima: string
 }
 
+// Helper function to generate pallet options
+const generatePalletOptions = () => {
+  const now = new Date()
+  const day = String(now.getDate()).padStart(2, '0')
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const year = String(now.getFullYear()).slice(-2)
+  const baseDate = `${day}${month}${year}`
+  
+  return [
+    { value: `${baseDate}-1`, label: `${baseDate}-1` },
+    { value: `${baseDate}-2`, label: `${baseDate}-2` },
+    { value: `${baseDate}-3`, label: `${baseDate}-3` },
+    { value: `${baseDate}-4`, label: `${baseDate}-4` },
+    { value: `${baseDate}-N/A`, label: `${baseDate}-N/A` }
+  ]
+}
+
 export default function PreRegistroPage() {
   return (
     <ProtectedRoute>
-      <PreRegistroContent />
+      <WMSErrorBoundary>
+        <PreRegistroContent />
+      </WMSErrorBoundary>
     </ProtectedRoute>
   )
 }
 
 function PreRegistroContent() {
   const { toast } = useToast()
+
+  // Refs for DOM manipulation
+  const trackingInputRef = useRef<HTMLInputElement>(null)
+  const tarimaSelectRef = useRef<HTMLButtonElement>(null)
+
+  // Generate pallet options once per render
+  const palletOptions = generatePalletOptions()
 
   const [formData, setFormData] = useState<PreRegistroForm>({
     numeroTracking: "",
@@ -93,10 +121,7 @@ function PreRegistroContent() {
       // If tracking number is filled, move to next field or process
       if (formData.numeroTracking.trim()) {
         // Focus on tarima dropdown or trigger processing
-        const tarimaSelect = document.querySelector('[role="combobox"]') as HTMLElement
-        if (tarimaSelect) {
-          tarimaSelect.click()
-        }
+        tarimaSelectRef.current?.click()
         
         toast({
           title: "Tracking escaneado",
@@ -107,31 +132,51 @@ function PreRegistroContent() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Create processed package
-    const newPackage: ProcessedPackage = {
-      id: `pkg_${Date.now()}`,
-      numeroTracking: formData.numeroTracking,
-      numeroCasillero: formData.numeroCasillero,
-      contenido: formData.contenido,
-      peso: formData.peso,
-      numeroTarima: formData.numeroTarima,
-      timestamp: new Date(),
-      estado: 'procesado'
+    try {
+      // Track form submission with Sentry
+      await Sentry.startSpan({ 
+        name: 'Package Pre-Registration',
+        op: 'form.submit'
+      }, async () => {
+        // Create processed package
+        const newPackage: ProcessedPackage = {
+          id: `pkg_${Date.now()}`,
+          numeroTracking: formData.numeroTracking,
+          numeroCasillero: formData.numeroCasillero,
+          contenido: formData.contenido,
+          peso: formData.peso,
+          numeroTarima: formData.numeroTarima,
+          timestamp: new Date(),
+          estado: 'procesado'
+        }
+        
+        // Add to session history
+        setProcessedPackages(prev => [...prev, newPackage])
+        
+        // Reset form
+        resetForm()
+        
+        toast({
+          title: "Paquete procesado",
+          description: `Tracking ${formData.numeroTracking} agregado al historial`,
+        })
+      })
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: {
+          section: 'preregistro-submit',
+          tracking: formData.numeroTracking
+        }
+      })
+      toast({
+        variant: "destructive",
+        title: "Error al procesar paquete",
+        description: "Ocurrió un error inesperado. Intente nuevamente.",
+      })
     }
-    
-    // Add to session history
-    setProcessedPackages(prev => [...prev, newPackage])
-    
-    // Reset form
-    resetForm()
-    
-    toast({
-      title: "Paquete procesado",
-      description: `Tracking ${formData.numeroTracking} agregado al historial`,
-    })
   }
 
   const resetForm = () => {
@@ -148,12 +193,9 @@ function PreRegistroContent() {
   const handleScanToggle = () => {
     setScannerMode(true)
     
-    // Focus on tracking input
-    const trackingInput = document.getElementById('numeroTracking') as HTMLInputElement
-    if (trackingInput) {
-      trackingInput.focus()
-      trackingInput.select() // Select all text for easy replacement
-    }
+    // Focus on tracking input using ref
+    trackingInputRef.current?.focus()
+    trackingInputRef.current?.select() // Select all text for easy replacement
     
     toast({
       title: "Modo escaneo activado",
@@ -318,6 +360,7 @@ function PreRegistroContent() {
               </Label>
               <Input
                 id="numeroTracking"
+                ref={trackingInputRef}
                 type="text"
                 value={formData.numeroTracking}
                 onChange={(e) => handleTrackingInputChange(e.target.value)}
@@ -341,6 +384,7 @@ function PreRegistroContent() {
               <Popover open={casilleroOpen} onOpenChange={setCasilleroOpen}>
                 <PopoverTrigger asChild>
                   <Button
+                    ref={tarimaSelectRef}
                     variant="outline"
                     role="combobox"
                     aria-expanded={casilleroOpen}
@@ -440,81 +484,11 @@ function PreRegistroContent() {
                   <SelectValue placeholder="- Seleccione una tarima -" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={(() => {
-                    const now = new Date()
-                    const day = String(now.getDate()).padStart(2, '0')
-                    const month = String(now.getMonth() + 1).padStart(2, '0')
-                    const year = String(now.getFullYear()).slice(-2)
-                    return `${day}${month}${year}-1`
-                  })()}>
-                    {(() => {
-                      const now = new Date()
-                      const day = String(now.getDate()).padStart(2, '0')
-                      const month = String(now.getMonth() + 1).padStart(2, '0')
-                      const year = String(now.getFullYear()).slice(-2)
-                      return `${day}${month}${year}-1`
-                    })()}
-                  </SelectItem>
-                  <SelectItem value={(() => {
-                    const now = new Date()
-                    const day = String(now.getDate()).padStart(2, '0')
-                    const month = String(now.getMonth() + 1).padStart(2, '0')
-                    const year = String(now.getFullYear()).slice(-2)
-                    return `${day}${month}${year}-2`
-                  })()}>
-                    {(() => {
-                      const now = new Date()
-                      const day = String(now.getDate()).padStart(2, '0')
-                      const month = String(now.getMonth() + 1).padStart(2, '0')
-                      const year = String(now.getFullYear()).slice(-2)
-                      return `${day}${month}${year}-2`
-                    })()}
-                  </SelectItem>
-                  <SelectItem value={(() => {
-                    const now = new Date()
-                    const day = String(now.getDate()).padStart(2, '0')
-                    const month = String(now.getMonth() + 1).padStart(2, '0')
-                    const year = String(now.getFullYear()).slice(-2)
-                    return `${day}${month}${year}-3`
-                  })()}>
-                    {(() => {
-                      const now = new Date()
-                      const day = String(now.getDate()).padStart(2, '0')
-                      const month = String(now.getMonth() + 1).padStart(2, '0')
-                      const year = String(now.getFullYear()).slice(-2)
-                      return `${day}${month}${year}-3`
-                    })()}
-                  </SelectItem>
-                  <SelectItem value={(() => {
-                    const now = new Date()
-                    const day = String(now.getDate()).padStart(2, '0')
-                    const month = String(now.getMonth() + 1).padStart(2, '0')
-                    const year = String(now.getFullYear()).slice(-2)
-                    return `${day}${month}${year}-4`
-                  })()}>
-                    {(() => {
-                      const now = new Date()
-                      const day = String(now.getDate()).padStart(2, '0')
-                      const month = String(now.getMonth() + 1).padStart(2, '0')
-                      const year = String(now.getFullYear()).slice(-2)
-                      return `${day}${month}${year}-4`
-                    })()}
-                  </SelectItem>
-                  <SelectItem value={(() => {
-                    const now = new Date()
-                    const day = String(now.getDate()).padStart(2, '0')
-                    const month = String(now.getMonth() + 1).padStart(2, '0')
-                    const year = String(now.getFullYear()).slice(-2)
-                    return `${day}${month}${year}-N/A`
-                  })()}>
-                    {(() => {
-                      const now = new Date()
-                      const day = String(now.getDate()).padStart(2, '0')
-                      const month = String(now.getMonth() + 1).padStart(2, '0')
-                      const year = String(now.getFullYear()).slice(-2)
-                      return `${day}${month}${year}-N/A`
-                    })()}
-                  </SelectItem>
+                  {palletOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -12,8 +12,10 @@ import { useToast } from "@/hooks/use-toast"
 import { SearchHero } from "@/components/recibidor-miami/SearchHero"
 import { SmartFilterBar } from "@/components/recibidor-miami/SmartFilterBar"
 import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
+import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { format } from "date-fns"
 import { type PackageSearchResult, type SearchResult, useFastSearch } from "@/hooks/useFastSearch"
+import * as Sentry from "@sentry/nextjs"
 
 // Constants
 const DEFAULT_PAGE_SIZE = 25
@@ -66,7 +68,9 @@ interface PackageFilters {
 export default function RecibidorMiamiPage() {
   return (
     <ProtectedRoute>
-      <RecibidorMiamiContent />
+      <WMSErrorBoundary>
+        <RecibidorMiamiContent />
+      </WMSErrorBoundary>
     </ProtectedRoute>
   )
 }
@@ -114,9 +118,13 @@ function RecibidorMiamiContent() {
 
   // Fetch packages function
   const fetchPackages = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
+    return await Sentry.startSpan({
+      name: 'Package Search',
+      op: 'data.fetch'
+    }, async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
       // Build query parameters
       const params = new URLSearchParams()
@@ -164,6 +172,12 @@ function RecibidorMiamiContent() {
       }
     } catch (err) {
       console.error('Error fetching packages:', err)
+      Sentry.captureException(err, {
+        tags: {
+          section: 'package-fetch',
+          filters: JSON.stringify(filters)
+        }
+      })
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'
       setError(errorMessage)
       setPackages([])
@@ -188,9 +202,10 @@ function RecibidorMiamiContent() {
           description: errorMessage,
         })
       }
-    } finally {
-      setLoading(false)
-    }
+      } finally {
+        setLoading(false)
+      }
+    })
   }, [filters, toast])
 
   // Fetch metadata
@@ -219,6 +234,11 @@ function RecibidorMiamiContent() {
       }
     } catch (err) {
       console.error('Error fetching metadata:', err)
+      Sentry.captureException(err, {
+        tags: {
+          section: 'metadata-fetch'
+        }
+      })
     }
   }, [])
 
@@ -309,16 +329,28 @@ function RecibidorMiamiContent() {
     
     try {
       // Use smartSearch directly with the current query and new page
-      const results = await smartSearch(fastSearchMeta.query, newPage, fastSearchMeta.pageSize)
-      if (results) {
-        console.log(`Got ${results.results.length} results for page ${newPage}`)
-        setFastSearchResults(results.results)
-        setFastSearchMeta(results)
-      } else {
-        console.error('No results returned from smartSearch')
-      }
+      await Sentry.startSpan({
+        name: 'Fast Search Pagination',
+        op: 'search.paginate'
+      }, async () => {
+        const results = await smartSearch(fastSearchMeta.query, newPage, fastSearchMeta.pageSize)
+        if (results) {
+          console.log(`Got ${results.results.length} results for page ${newPage}`)
+          setFastSearchResults(results.results)
+          setFastSearchMeta(results)
+        } else {
+          console.error('No results returned from smartSearch')
+        }
+      })
     } catch (error) {
       console.error('Fast search pagination error:', error)
+      Sentry.captureException(error, {
+        tags: {
+          section: 'fast-search-pagination',
+          page: newPage.toString(),
+          query: fastSearchMeta.query
+        }
+      })
       // Show error toast
       toast({
         variant: "destructive",

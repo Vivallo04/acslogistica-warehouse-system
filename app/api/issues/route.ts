@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { mongodb } from '@/lib/mongodb'
 import { emailService } from '@/lib/email'
 import { validateAuthToken, AUTH_RESPONSES } from '@/lib/server-auth'
+import * as Sentry from '@sentry/nextjs'
 
 // Define environment interface for type safety
 interface Environment {
@@ -107,6 +108,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error processing issue report:', error)
+    Sentry.captureException(error, {
+      tags: {
+        section: 'issue-report'
+      }
+    })
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -136,6 +142,11 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching issues:', error)
+    Sentry.captureException(error, {
+      tags: {
+        section: 'issue-fetch'
+      }
+    })
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

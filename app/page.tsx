@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, User, Shield, Clock } from "lucide-react"
+import * as Sentry from "@sentry/nextjs"
+import { useEffect } from "react"
 
 export default function HomePage() {
   return (
@@ -16,6 +18,16 @@ export default function HomePage() {
 
 function DashboardContent() {
   const { user, userRole } = useAuth()
+
+  useEffect(() => {
+    // Track page load performance
+    Sentry.startSpan({
+      name: 'Dashboard Load',
+      op: 'navigation'
+    }, () => {
+      // Dashboard has loaded
+    })
+  }, [])
 
   const getWelcomeMessage = () => {
     const currentHour = new Date().getHours()

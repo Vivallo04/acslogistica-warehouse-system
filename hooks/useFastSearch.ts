@@ -70,7 +70,7 @@ export function useFastSearch() {
   const [searchError, setSearchError] = useState<string | null>(null)
   const [currentSearchResult, setCurrentSearchResult] = useState<SearchResult | null>(null)
 
-  // Search by tracking number using dedicated endpoint
+  // Search by tracking number using dedicated endpoint with server-side pagination
   const searchByTracking = useCallback(async (query: string, page: number = 1, pageSize: number = 25): Promise<SearchResult | null> => {
     if (!query.trim()) return null
     
@@ -79,31 +79,59 @@ export function useFastSearch() {
     
     try {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5286'
-      const response = await fetch(`${apiBaseUrl}/api/Packages/search/tracking/${encodeURIComponent(query.trim())}`)
+      // Add pagination parameters to the API call
+      const params = new URLSearchParams({
+        ElementosPorPagina: pageSize.toString(),
+        Pagina: page.toString(),
+        OrderBy: 'fecha',
+        SortDirection: 'desc'
+      })
+      
+      const response = await fetch(`${apiBaseUrl}/api/Packages/search/tracking/${encodeURIComponent(query.trim())}?${params.toString()}`)
       
       if (!response.ok) {
         throw new Error(`Search failed: ${response.status}`)
       }
       
-      const allResults: PackageSearchResult[] = await response.json()
+      // Check if response is paginated (object with data property) or direct array
+      const responseData = await response.json()
       
-      // Manual pagination since tracking endpoint returns all results
-      const startIndex = (page - 1) * pageSize
-      const endIndex = startIndex + pageSize
-      const paginatedResults = allResults.slice(startIndex, endIndex)
-      
-      return {
-        query: query.trim(),
-        searchType: 'tracking',
-        results: paginatedResults,
-        totalFound: paginatedResults.length,
-        totalAvailable: allResults.length,
-        currentPage: page,
-        pageSize: pageSize,
-        hasNextPage: endIndex < allResults.length,
-        hasPreviousPage: page > 1,
-        executionTimeMs: undefined,
-        cached: false
+      // Handle both paginated and direct array responses
+      if (Array.isArray(responseData)) {
+        // Fallback to client-side pagination for legacy endpoints
+        const allResults: PackageSearchResult[] = responseData
+        const startIndex = (page - 1) * pageSize
+        const endIndex = startIndex + pageSize
+        const paginatedResults = allResults.slice(startIndex, endIndex)
+        
+        return {
+          query: query.trim(),
+          searchType: 'tracking',
+          results: paginatedResults,
+          totalFound: paginatedResults.length,
+          totalAvailable: allResults.length,
+          currentPage: page,
+          pageSize: pageSize,
+          hasNextPage: endIndex < allResults.length,
+          hasPreviousPage: page > 1,
+          executionTimeMs: undefined,
+          cached: false
+        }
+      } else {
+        // Use server-side paginated response
+        return {
+          query: query.trim(),
+          searchType: 'tracking',
+          results: responseData.data || [],
+          totalFound: (responseData.data || []).length,
+          totalAvailable: responseData.totalCount || 0,
+          currentPage: page,
+          pageSize: pageSize,
+          hasNextPage: responseData.hasNext || false,
+          hasPreviousPage: responseData.hasPrevious || false,
+          executionTimeMs: undefined,
+          cached: false
+        }
       }
     } catch (error) {
       console.error('Tracking search error:', error)
@@ -172,13 +200,14 @@ export function useFastSearch() {
         return await searchByTracking(query, page, pageSize)
       case 'client':
         return await searchByClient(query, page, pageSize)
-      case 'mixed':
+      case 'mixed': {
         // For mixed queries, try tracking first (faster), then client
         const trackingResult = await searchByTracking(query, page, pageSize)
         if (trackingResult && trackingResult.results.length > 0) {
           return trackingResult
         }
         return await searchByClient(query, page, pageSize)
+      }
       default:
         return await searchByClient(query, page, pageSize)
     }

@@ -25,6 +25,9 @@ interface QuickAction {
   color: string
 }
 
+// Constants
+const DEFAULT_PAGE_SIZE = 25
+
 const quickActions: QuickAction[] = [
   {
     id: "prealertados",
@@ -103,9 +106,6 @@ export function SearchHero({
       console.error('Fast search error:', error)
     }
   }, [smartSearch, onFastSearchResult, setCurrentSearchResult])
-
-  // Import DEFAULT_PAGE_SIZE constant
-  const DEFAULT_PAGE_SIZE = 25
 
   // Debounced search effect
   useEffect(() => {

@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DotsLoader } from "@/components/ui/loading"
 import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react"
 import { loginUser } from "@/lib/auth"
+import * as Sentry from "@sentry/nextjs"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -28,15 +29,26 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    try {
-      await loginUser(email, password)
-      // Redirect to home page after successful login
-      router.push("/")
-    } catch (error: any) {
-      setError(error.message || 'Error de autenticación desconocido')
-    } finally {
-      setIsLoading(false)
-    }
+    await Sentry.startSpan({
+      name: 'User Login',
+      op: 'auth.login'
+    }, async () => {
+      try {
+        await loginUser(email, password)
+        // Redirect to home page after successful login
+        router.push("/")
+      } catch (error: any) {
+        Sentry.captureException(error, {
+          tags: {
+            section: 'login-form',
+            email: email
+          }
+        })
+        setError(error.message || 'Error de autenticación desconocido')
+      } finally {
+        setIsLoading(false)
+      }
+    })
   }
 
   return (

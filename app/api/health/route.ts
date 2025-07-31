@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { mysql_db } from '@/lib/mysql'
 import type { ApiResponse } from '@/types/wms'
+import * as Sentry from '@sentry/nextjs'
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +55,11 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Health check error:', error)
+    Sentry.captureException(error, {
+      tags: {
+        section: 'health-check'
+      }
+    })
     
     const response: ApiResponse = {
       success: false,

@@ -4,47 +4,52 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { mysql_db } from '@/lib/mysql'
 import type { ApiResponse } from '@/types/wms'
 import * as Sentry from '@sentry/nextjs'
 
 export async function GET(request: NextRequest) {
   try {
-    // Test MySQL connection
-    const mysqlStatus = await mysql_db.getConnectionStatus()
+    // Test WMS backend API connectivity instead of direct database access
+    let backendStatus = { connected: false, message: 'Backend unavailable' }
     
-    // Test basic query
-    let queryTest = false
     try {
-      await mysql_db.query('SELECT 1 as test')
-      queryTest = true
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      
+      const response = await fetch(`${apiBaseUrl}/api/health`, { 
+        method: 'GET',
+        signal: controller.signal 
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (response.ok) {
+        backendStatus = { connected: true, message: 'Backend API accessible' }
+      } else {
+        backendStatus = { connected: false, message: `Backend returned ${response.status}` }
+      }
     } catch (error) {
-      console.error('Query test failed:', error)
+      backendStatus = { 
+        connected: false, 
+        message: error instanceof Error ? error.message : 'Backend connection failed' 
+      }
     }
 
     const response: ApiResponse<{
       status: string
       timestamp: Date
-      database: {
-        mysql: {
-          connected: boolean
-          message: string
-          query_test: boolean
-        }
+      backend: {
+        connected: boolean
+        message: string
       }
       environment: string
     }> = {
       success: true,
       data: {
-        status: mysqlStatus.connected && queryTest ? 'healthy' : 'degraded',
+        status: backendStatus.connected ? 'healthy' : 'degraded',
         timestamp: new Date(),
-        database: {
-          mysql: {
-            connected: mysqlStatus.connected,
-            message: mysqlStatus.message,
-            query_test: queryTest
-          }
-        },
+        backend: backendStatus,
         environment: process.env.NODE_ENV || 'development'
       },
       timestamp: new Date()

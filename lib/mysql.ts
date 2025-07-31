@@ -95,7 +95,9 @@ class MySQLConnection {
     } catch (error) {
       console.error('MySQL query error:', error)
       console.error('SQL:', sql)
-      console.error('Params:', params)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Params:', params)
+      }
       throw error
     }
   }
@@ -122,7 +124,9 @@ class MySQLConnection {
     } catch (error) {
       console.error('MySQL insert error:', error)
       console.error('SQL:', sql)
-      console.error('Params:', params)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Params:', params)
+      }
       throw error
     }
   }
@@ -141,7 +145,9 @@ class MySQLConnection {
     } catch (error) {
       console.error('MySQL update error:', error)
       console.error('SQL:', sql)
-      console.error('Params:', params)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Params:', params)
+      }
       throw error
     }
   }

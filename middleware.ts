@@ -64,7 +64,9 @@ export async function middleware(request: NextRequest) {
     const authResult = await validateAuthFromCookies(request)
     
     if (!authResult.valid) {
-      console.log(`[MIDDLEWARE] Unauthorized access attempt to ${pathname}: ${authResult.error}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[MIDDLEWARE] Unauthorized access attempt to ${pathname}: ${authResult.error}`)
+      }
       
       // Redirect to login page with return URL
       const loginUrl = new URL('/login', request.url)
@@ -74,7 +76,9 @@ export async function middleware(request: NextRequest) {
     }
 
     // User is authenticated, allow access
-    console.log(`[MIDDLEWARE] Authorized access to ${pathname} by ${authResult.user?.email}`)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[MIDDLEWARE] Authorized access to ${pathname} by ${authResult.user?.email}`)
+    }
     return NextResponse.next()
   }
 

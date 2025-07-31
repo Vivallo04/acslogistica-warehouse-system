@@ -2,8 +2,61 @@ import { NextRequest } from 'next/server'
 import { validateCompanyEmail, getUserRole } from './auth'
 
 /**
+ * CRITICAL SECURITY WARNING: This implementation does NOT verify JWT signatures!
+ * This is a severe security vulnerability that allows token forgery.
+ * DO NOT USE IN PRODUCTION without proper Firebase Admin SDK verification.
+ */
+
+/**
+ * Validates Firebase token - INSECURE implementation for development only
+ * @param token - Firebase ID token to validate
+ * @returns Validation result with user data or error
+ */
+async function validateFirebaseToken(token: string): Promise<{ valid: boolean; user?: any; error?: string }> {
+  // WARNING: This is INSECURE and should NEVER be used in production
+  // Tokens MUST be verified with Firebase Admin SDK for signature validation
+  if (process.env.NODE_ENV === 'production') {
+    console.error('CRITICAL SECURITY ERROR: JWT signature verification is not implemented in production!')
+    console.error('This allows anyone to forge authentication tokens!')
+    console.error('Implement Firebase Admin SDK verification immediately!')
+  }
+  
+  // Basic token structure validation (Firebase tokens are JWTs)
+  const tokenParts = token.split('.')
+  if (tokenParts.length !== 3) {
+    return { valid: false, error: 'Invalid token format' }
+  }
+
+  try {
+    // Decode the payload (middle part of JWT) - NO SIGNATURE VERIFICATION
+    const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString())
+    
+    // Basic validation
+    if (!payload.email || !payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {
+      return { valid: false, error: 'Token expired or invalid' }
+    }
+
+    // Validate company email
+    if (!validateCompanyEmail(payload.email)) {
+      return { valid: false, error: 'Unauthorized email domain' }
+    }
+
+    return { 
+      valid: true, 
+      user: {
+        email: payload.email,
+        uid: payload.sub || payload.user_id,
+        emailVerified: payload.email_verified || false
+      }
+    }
+  } catch (decodeError) {
+    return { valid: false, error: 'Failed to decode token' }
+  }
+}
+
+/**
  * Validates Firebase ID token from Authorization header
- * Note: This is a simplified validation - in production, you should use Firebase Admin SDK
+ * WARNING: Uses insecure token validation - DO NOT USE IN PRODUCTION
  */
 export async function validateAuthToken(request: NextRequest): Promise<{ valid: boolean; user?: any; error?: string }> {
   try {
@@ -19,41 +72,7 @@ export async function validateAuthToken(request: NextRequest): Promise<{ valid: 
       return { valid: false, error: 'Missing token' }
     }
 
-    // In a production environment, you would verify the Firebase ID token here using Firebase Admin SDK
-    // For now, we'll implement a basic validation
-    // TODO: Replace with proper Firebase Admin SDK token verification
-    
-    // Basic token structure validation (Firebase tokens are JWTs)
-    const tokenParts = token.split('.')
-    if (tokenParts.length !== 3) {
-      return { valid: false, error: 'Invalid token format' }
-    }
-
-    try {
-      // Decode the payload (middle part of JWT)
-      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString())
-      
-      // Basic validation
-      if (!payload.email || !payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {
-        return { valid: false, error: 'Token expired or invalid' }
-      }
-
-      // Validate company email
-      if (!validateCompanyEmail(payload.email)) {
-        return { valid: false, error: 'Unauthorized email domain' }
-      }
-
-      return { 
-        valid: true, 
-        user: {
-          email: payload.email,
-          uid: payload.sub || payload.user_id,
-          emailVerified: payload.email_verified || false
-        }
-      }
-    } catch (decodeError) {
-      return { valid: false, error: 'Failed to decode token' }
-    }
+    return await validateFirebaseToken(token)
 
   } catch (error) {
     console.error('Auth validation error:', error)
@@ -63,6 +82,7 @@ export async function validateAuthToken(request: NextRequest): Promise<{ valid: 
 
 /**
  * Validates Firebase ID token from cookies (for middleware)
+ * WARNING: Uses insecure token validation - DO NOT USE IN PRODUCTION
  */
 export async function validateAuthFromCookies(request: NextRequest): Promise<{ valid: boolean; user?: any; error?: string }> {
   try {
@@ -74,34 +94,7 @@ export async function validateAuthFromCookies(request: NextRequest): Promise<{ v
       return { valid: false, error: 'No authentication token found' }
     }
 
-    // Similar validation as above but from cookies
-    const tokenParts = token.split('.')
-    if (tokenParts.length !== 3) {
-      return { valid: false, error: 'Invalid token format' }
-    }
-
-    try {
-      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString())
-      
-      if (!payload.email || !payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {
-        return { valid: false, error: 'Token expired or invalid' }
-      }
-
-      if (!validateCompanyEmail(payload.email)) {
-        return { valid: false, error: 'Unauthorized email domain' }
-      }
-
-      return { 
-        valid: true, 
-        user: {
-          email: payload.email,
-          uid: payload.sub || payload.user_id,
-          emailVerified: payload.email_verified || false
-        }
-      }
-    } catch (decodeError) {
-      return { valid: false, error: 'Failed to decode token' }
-    }
+    return await validateFirebaseToken(token)
 
   } catch (error) {
     console.error('Cookie auth validation error:', error)

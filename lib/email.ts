@@ -3,6 +3,16 @@
  * Handles sending emails for feedback and issue notifications
  */
 
+// HTML escape function to prevent XSS attacks
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
 interface EmailConfig {
   host: string
   port: number
@@ -89,25 +99,25 @@ class EmailService {
     
     return {
       to: process.env.COMPANY_EMAIL || 'feedback@yourcompany.com',
-      subject: `Nuevos Comentarios: ${feedback.subject}`,
+      subject: `Nuevos Comentarios: ${escapeHtml(feedback.subject)}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #1f2937;">Nuevos Comentarios Recibidos</h2>
           
           <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Tipo:</strong> ${feedback.type}</p>
-            <p><strong>Asunto:</strong> ${feedback.subject}</p>
+            <p><strong>Tipo:</strong> ${escapeHtml(feedback.type)}</p>
+            <p><strong>Asunto:</strong> ${escapeHtml(feedback.subject)}</p>
             <p><strong>Calificación:</strong> 
               <span style="color: ${priorityColor};">
                 ${'★'.repeat(feedback.rating)}${'☆'.repeat(5 - feedback.rating)} (${feedback.rating}/5)
               </span>
             </p>
-            <p><strong>Usuario:</strong> ${feedback.email} (${feedback.userRole})</p>
+            <p><strong>Usuario:</strong> ${escapeHtml(feedback.email)} (${escapeHtml(feedback.userRole)})</p>
           </div>
           
           <div style="background: #ffffff; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
             <h3 style="margin-top: 0;">Mensaje:</h3>
-            <p style="white-space: pre-wrap;">${feedback.message}</p>
+            <p style="white-space: pre-wrap;">${escapeHtml(feedback.message)}</p>
           </div>
           
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
@@ -120,13 +130,13 @@ class EmailService {
       text: `
 Nuevos Comentarios Recibidos
 
-Tipo: ${feedback.type}
-Asunto: ${feedback.subject}
+Tipo: ${escapeHtml(feedback.type)}
+Asunto: ${escapeHtml(feedback.subject)}
 Calificación: ${feedback.rating}/5
-Usuario: ${feedback.email} (${feedback.userRole})
+Usuario: ${escapeHtml(feedback.email)} (${escapeHtml(feedback.userRole)})
 
 Mensaje:
-${feedback.message}
+${escapeHtml(feedback.message)}
       `
     }
   }
@@ -143,26 +153,26 @@ ${feedback.message}
     
     return {
       to: process.env.COMPANY_EMAIL || 'issues@yourcompany.com',
-      subject: `[${issue.priority.toUpperCase()}] Incidencia #${issue.issueId}: ${issue.title}`,
+      subject: `[${escapeHtml(issue.priority.toUpperCase())}] Incidencia #${escapeHtml(issue.issueId)}: ${escapeHtml(issue.title)}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #1f2937;">Nuevo Reporte de Incidencia</h2>
           
           <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>ID de Incidencia:</strong> ${issue.issueId}</p>
-            <p><strong>Tipo:</strong> ${issue.type}</p>
+            <p><strong>ID de Incidencia:</strong> ${escapeHtml(issue.issueId)}</p>
+            <p><strong>Tipo:</strong> ${escapeHtml(issue.type)}</p>
             <p><strong>Prioridad:</strong> 
               <span style="background: ${priorityColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
-                ${issue.priority.toUpperCase()}
+                ${escapeHtml(issue.priority.toUpperCase())}
               </span>
             </p>
-            <p><strong>Título:</strong> ${issue.title}</p>
-            <p><strong>Reportado por:</strong> ${issue.email} (${issue.userRole})</p>
+            <p><strong>Título:</strong> ${escapeHtml(issue.title)}</p>
+            <p><strong>Reportado por:</strong> ${escapeHtml(issue.email)} (${escapeHtml(issue.userRole)})</p>
           </div>
           
           <div style="background: #ffffff; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 20px;">
             <h3 style="margin-top: 0;">Descripción:</h3>
-            <p style="white-space: pre-wrap;">${issue.description}</p>
+            <p style="white-space: pre-wrap;">${escapeHtml(issue.description)}</p>
           </div>
           
           ${issue.environment ? `
@@ -182,16 +192,16 @@ ${feedback.message}
       text: `
 Nuevo Reporte de Incidencia
 
-ID de Incidencia: ${issue.issueId}
-Tipo: ${issue.type}
-Prioridad: ${issue.priority}
-Título: ${issue.title}
-Reportado por: ${issue.email} (${issue.userRole})
+ID de Incidencia: ${escapeHtml(issue.issueId)}
+Tipo: ${escapeHtml(issue.type)}
+Prioridad: ${escapeHtml(issue.priority)}
+Título: ${escapeHtml(issue.title)}
+Reportado por: ${escapeHtml(issue.email)} (${escapeHtml(issue.userRole)})
 
 Descripción:
-${issue.description}
+${escapeHtml(issue.description)}
 
-Entorno: ${issue.environment ? JSON.stringify(issue.environment, null, 2) : 'No proporcionado'}
+Entorno: ${issue.environment ? escapeHtml(JSON.stringify(issue.environment, null, 2)) : 'No proporcionado'}
       `
     }
   }

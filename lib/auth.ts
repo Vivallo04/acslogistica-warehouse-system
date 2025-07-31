@@ -87,8 +87,34 @@ export async function registerUser(email: string, password: string, fullName: st
     // Send email verification
     await sendEmailVerification(user)
 
-    // Here you would create user record in your database
-    // await createUserRecord({ firebaseUid: user.uid, email, fullName })
+    // Create user record in database
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          firebaseUid: user.uid, 
+          email, 
+          fullName,
+          role: 'pending',
+          createdAt: new Date().toISOString()
+        })
+      })
+      
+      if (!response.ok) {
+        // Rollback: delete the Firebase user if database creation fails
+        await user.delete()
+        throw new Error('Failed to create user record')
+      }
+    } catch (dbError) {
+      // Rollback: delete the Firebase user if database creation fails
+      try {
+        await user.delete()
+      } catch (deleteError) {
+        console.error('Failed to rollback Firebase user creation:', deleteError)
+      }
+      throw new Error('Failed to create user record in database')
+    }
 
     return {
       success: true,
@@ -160,44 +186,35 @@ export async function logoutUser() {
   }
 }
 
-export function getUserRole(user: User): UserRole {
-  // In a real app, this would come from custom claims or database
-  // For demo purposes, we'll simulate based on email
+export async function getUserRole(user: User): Promise<UserRole> {
   const email = user.email?.toLowerCase() || ""
   
-  // TESTING MODE: Auto-approve all verified emails as manager
-  // Additional security: Re-validate email domain even for verified users
-  if (user.emailVerified && validateCompanyEmail(email)) {
-    console.log(`[AUTH] Email verified and authorized - auto-approving user as manager: ${email}`)
-    return {
-      role: "manager",
-      approved: true,
-      permissions: ROLE_PERMISSIONS.manager,
+  try {
+    // Fetch user role from backend database
+    const response = await fetch(`/api/users/${user.uid}/role`, {
+      headers: {
+        'Authorization': `Bearer ${await user.getIdToken()}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch user role')
     }
-  }
-
-  // Role patterns for specific testing accounts
-  if (email.includes("admin@")) {
+    
+    const { role, approved } = await response.json()
+    
     return {
-      role: "super_admin",
-      approved: true,
-      permissions: ROLE_PERMISSIONS.super_admin,
+      role: role || "pending",
+      approved: approved || false,
+      permissions: ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.pending,
     }
-  }
-
-  if (email.includes("manager@")) {
+  } catch (error) {
+    console.error('[AUTH] Error fetching user role:', error)
+    // Default to pending if role fetch fails - secure by default
     return {
-      role: "manager",
-      approved: true,
-      permissions: ROLE_PERMISSIONS.manager,
+      role: "pending",
+      approved: false,
+      permissions: ROLE_PERMISSIONS.pending,
     }
-  }
-
-  // For unverified emails, still pending
-  console.log(`[AUTH] Email not verified - keeping as pending: ${email}`)
-  return {
-    role: "pending",
-    approved: false,
-    permissions: ROLE_PERMISSIONS.pending,
   }
 }

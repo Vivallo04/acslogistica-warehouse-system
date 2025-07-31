@@ -90,85 +90,87 @@ export class WMSDatabase {
   // PACKAGE OPERATIONS
 
   /**
-   * Create a new package record
+   * Create a new package record with transaction safety
    */
   async createPackage(packageData: CreatePackageRequest, userId: number): Promise<Package> {
-    const timestamp = mysql_db.getCurrentUnixTimestamp()
-    
-    // First, insert into node table
-    const nodeResult = await mysql_db.insert(`
-      INSERT INTO node (
-        type, title, uid, status, created, changed, promote, sticky, language
-      ) VALUES (?, ?, ?, 1, ?, ?, 0, 0, 'und')
-    `, [
-      'package', // node type
-      packageData.tracking_number, // title
-      userId,
-      timestamp,
-      timestamp
-    ])
+    return mysql_db.transaction(async (connection) => {
+      const timestamp = mysql_db.getCurrentUnixTimestamp()
+      
+      // First, insert into node table
+      const [nodeResult] = await connection.execute(`
+        INSERT INTO node (
+          type, title, uid, status, created, changed, promote, sticky, language
+        ) VALUES (?, ?, ?, 1, ?, ?, 0, 0, 'und')
+      `, [
+        'package', // node type
+        packageData.tracking_number, // title
+        userId,
+        timestamp,
+        timestamp
+      ])
 
-    const nodeId = nodeResult.insertId
+      const nodeId = (nodeResult as any).insertId
 
-    // Insert package-specific field data
-    await mysql_db.insert(`
-      INSERT INTO field_data_field_tracking_number (
-        entity_type, bundle, entity_id, revision_id, language, delta, field_tracking_number_value
-      ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
-    `, [nodeId, nodeId, packageData.tracking_number])
-
-    if (packageData.reference_number) {
-      await mysql_db.insert(`
-        INSERT INTO field_data_field_reference_number (
-          entity_type, bundle, entity_id, revision_id, language, delta, field_reference_number_value
+      // Insert package-specific field data
+      await connection.execute(`
+        INSERT INTO field_data_field_tracking_number (
+          entity_type, bundle, entity_id, revision_id, language, delta, field_tracking_number_value
         ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
-      `, [nodeId, nodeId, packageData.reference_number])
-    }
+      `, [nodeId, nodeId, packageData.tracking_number])
 
-    if (packageData.recipient_name) {
-      await mysql_db.insert(`
-        INSERT INTO field_data_field_recipient_name (
-          entity_type, bundle, entity_id, revision_id, language, delta, field_recipient_name_value
+      if (packageData.reference_number) {
+        await connection.execute(`
+          INSERT INTO field_data_field_reference_number (
+            entity_type, bundle, entity_id, revision_id, language, delta, field_reference_number_value
+          ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
+        `, [nodeId, nodeId, packageData.reference_number])
+      }
+
+      if (packageData.recipient_name) {
+        await connection.execute(`
+          INSERT INTO field_data_field_recipient_name (
+            entity_type, bundle, entity_id, revision_id, language, delta, field_recipient_name_value
+          ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
+        `, [nodeId, nodeId, packageData.recipient_name])
+      }
+
+      if (packageData.weight) {
+        await connection.execute(`
+          INSERT INTO field_data_field_weight (
+            entity_type, bundle, entity_id, revision_id, language, delta, field_weight_value
+          ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
+        `, [nodeId, nodeId, packageData.weight])
+      }
+
+      if (packageData.pallet_id) {
+        await connection.execute(`
+          INSERT INTO field_data_field_pallet (
+            entity_type, bundle, entity_id, revision_id, language, delta, field_pallet_target_id
+          ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
+        `, [nodeId, nodeId, packageData.pallet_id])
+      }
+
+      // Set status
+      await connection.execute(`
+        INSERT INTO field_data_field_status (
+          entity_type, bundle, entity_id, revision_id, language, delta, field_status_value
         ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
-      `, [nodeId, nodeId, packageData.recipient_name])
-    }
+      `, [nodeId, nodeId, PackageStatus.RECEIVED])
 
-    if (packageData.weight) {
-      await mysql_db.insert(`
-        INSERT INTO field_data_field_weight (
-          entity_type, bundle, entity_id, revision_id, language, delta, field_weight_value
+      // Set priority
+      await connection.execute(`
+        INSERT INTO field_data_field_priority (
+          entity_type, bundle, entity_id, revision_id, language, delta, field_priority_value
         ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
-      `, [nodeId, nodeId, packageData.weight])
-    }
+      `, [nodeId, nodeId, packageData.priority])
 
-    if (packageData.pallet_id) {
-      await mysql_db.insert(`
-        INSERT INTO field_data_field_pallet (
-          entity_type, bundle, entity_id, revision_id, language, delta, field_pallet_target_id
-        ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
-      `, [nodeId, nodeId, packageData.pallet_id])
-    }
-
-    // Set status
-    await mysql_db.insert(`
-      INSERT INTO field_data_field_status (
-        entity_type, bundle, entity_id, revision_id, language, delta, field_status_value
-      ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
-    `, [nodeId, nodeId, PackageStatus.RECEIVED])
-
-    // Set priority
-    await mysql_db.insert(`
-      INSERT INTO field_data_field_priority (
-        entity_type, bundle, entity_id, revision_id, language, delta, field_priority_value
-      ) VALUES ('node', 'package', ?, ?, 'und', 0, ?)
-    `, [nodeId, nodeId, packageData.priority])
-
-    // Return the created package
-    const createdPackage = await this.getPackageById(nodeId)
-    if (!createdPackage) {
-      throw new Error('Failed to retrieve created package')
-    }
-    return createdPackage
+      // Return the created package
+      const createdPackage = await this.getPackageById(nodeId)
+      if (!createdPackage) {
+        throw new Error('Failed to retrieve created package')
+      }
+      return createdPackage
+    })
   }
 
   /**

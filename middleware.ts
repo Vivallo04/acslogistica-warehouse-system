@@ -29,16 +29,22 @@ const IGNORED_PATHS = [
   '/static'
 ]
 
+function matchesRoute(pathname: string, routes: string[]): boolean {
+  return routes.some(route => {
+    // Exact match
+    if (pathname === route) return true
+    // Match with trailing slash to ensure it's a proper sub-route
+    if (pathname.startsWith(route + '/')) return true
+    return false
+  })
+}
+
 function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some(route => 
-    pathname === route || pathname.startsWith(route + '/')
-  )
+  return matchesRoute(pathname, PROTECTED_ROUTES)
 }
 
 function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some(route => 
-    pathname === route || pathname.startsWith(route + '/')
-  )
+  return matchesRoute(pathname, PUBLIC_ROUTES)
 }
 
 function shouldIgnorePath(pathname: string): boolean {

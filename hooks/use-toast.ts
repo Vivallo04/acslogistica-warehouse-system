@@ -58,6 +58,11 @@ interface State {
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
+export function cleanupToasts() {
+  toastTimeouts.forEach((timeout) => clearTimeout(timeout))
+  toastTimeouts.clear()
+}
+
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
     return
@@ -92,16 +97,6 @@ export const reducer = (state: State, action: Action): State => {
 
     case "DISMISS_TOAST": {
       const { toastId } = action
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
-      }
 
       return {
         ...state,
@@ -138,6 +133,18 @@ function dispatch(action: Action) {
   listeners.forEach((listener) => {
     listener(memoryState)
   })
+  
+  // Handle side effects after reducer runs (keeping reducer pure)
+  if (action.type === "DISMISS_TOAST") {
+    const { toastId } = action
+    if (toastId) {
+      addToRemoveQueue(toastId)
+    } else {
+      memoryState.toasts.forEach((toast) => {
+        addToRemoveQueue(toast.id)
+      })
+    }
+  }
 }
 
 type Toast = Omit<ToasterToast, "id">

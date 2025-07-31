@@ -3,6 +3,13 @@ import { mongodb } from '@/lib/mongodb'
 import { emailService } from '@/lib/email'
 import { validateAuthToken, AUTH_RESPONSES } from '@/lib/server-auth'
 
+// Define environment interface for type safety
+interface Environment {
+  userAgent: string
+  url: string
+  timestamp: string
+}
+
 // Define validation schema
 interface IssueRequest {
   type: string
@@ -15,7 +22,7 @@ interface IssueRequest {
   email: string
   userRole: string
   includeScreenshot: boolean
-  environment: any
+  environment: Environment
 }
 
 function validateIssue(data: any): data is IssueRequest {

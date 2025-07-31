@@ -61,6 +61,7 @@ function PreRegistroContent() {
   // Refs for DOM manipulation
   const trackingInputRef = useRef<HTMLInputElement>(null)
   const tarimaSelectRef = useRef<HTMLButtonElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   // Generate pallet options once per render
   const palletOptions = generatePalletOptions()
@@ -293,12 +294,7 @@ function PreRegistroContent() {
       if (event.ctrlKey) {
         if (event.key === 's') {
           event.preventDefault()
-          // Trigger form submission
-          const form = document.querySelector('form')
-          if (form) {
-            const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
-            form.dispatchEvent(submitEvent)
-          }
+          formRef.current?.requestSubmit()
         } else if (event.key === 'r') {
           event.preventDefault()
           resetForm()
@@ -346,7 +342,7 @@ function PreRegistroContent() {
             <CardTitle>Información del Paquete</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
             {/* Número de Tracking - Required */}
             <div className="space-y-2">
               <Label htmlFor="numeroTracking" className="text-sm font-medium flex items-center gap-2">

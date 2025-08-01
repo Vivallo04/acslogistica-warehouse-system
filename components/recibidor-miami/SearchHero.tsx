@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Search, Package, Clock, AlertTriangle, Zap, User, Hash, Building2, Plane } from "lucide-react"
+import { Search, Package, Clock, User, Hash, Building2, Plane, AlertTriangle } from "lucide-react"
 import { useFastSearch, type SearchResult, type PackageSearchResult } from "@/hooks/useFastSearch"
 
 interface SearchHeroProps {
@@ -69,7 +69,6 @@ export function SearchHero({
   
   const { 
     smartSearch, 
-    getSuggestions, 
     isSearching, 
     searchError, 
     detectSearchType,

@@ -30,14 +30,30 @@ export interface ProcessedPackage {
   estado: 'procesado' | 'pendiente'
 }
 
+interface BatchSession {
+  id: string
+  isActive: boolean
+  startedAt: Date
+  packagesScanned: number
+  defaultValues: {
+    contenido: string
+    peso: string
+    numeroTarima: string
+    numeroCasillero: string
+  }
+  status: 'active' | 'paused' | 'completed'
+}
+
 interface SessionHistoryProps {
   packages: ProcessedPackage[]
+  batchSession?: BatchSession | null
   onClearSession: () => void
   onExportSession: () => void
 }
 
 export function SessionHistory({ 
   packages, 
+  batchSession,
   onClearSession, 
   onExportSession 
 }: SessionHistoryProps) {
@@ -110,10 +126,22 @@ export function SessionHistory({
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Package className="w-5 h-5" />
-                Historial de Sesión
+                {batchSession?.isActive ? 'Sesión de Lote' : 'Historial de Sesión'}
                 <Badge variant="secondary" className="ml-2">
                   {packages.length} paquete{packages.length !== 1 ? 's' : ''}
                 </Badge>
+                {batchSession?.isActive && (
+                  <Badge 
+                    variant={batchSession.status === 'active' ? 'default' : 'secondary'}
+                    className={
+                      batchSession.status === 'active' 
+                        ? 'bg-green-600 animate-pulse' 
+                        : 'bg-orange-500'
+                    }
+                  >
+                    {batchSession.status === 'active' ? '⚡ Activo' : '⏸️ Pausado'}
+                  </Badge>
+                )}
               </CardTitle>
               
               <div className="flex items-center gap-3">
@@ -146,9 +174,21 @@ export function SessionHistory({
           <CardContent className="pt-0">
             {/* Action Buttons */}
             <div className="flex items-center justify-between mb-4 pb-4 border-b">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" />
-                <span>Sesión iniciada: {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}</span>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>
+                    {batchSession?.isActive 
+                      ? `Lote iniciado: ${format(batchSession.startedAt, 'dd/MM/yyyy HH:mm', { locale: es })}`
+                      : `Sesión iniciada: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}`
+                    }
+                  </span>
+                </div>
+                {batchSession?.isActive && (
+                  <div className="flex items-center gap-2 text-accent-blue">
+                    <span className="font-medium">ID: {batchSession.id.split('_')[1]}</span>
+                  </div>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
@@ -242,9 +282,19 @@ export function SessionHistory({
                   {pendingCount > 0 && (
                     <span>Pendientes: <strong className="text-orange-600">{pendingCount}</strong></span>
                   )}
+                  {batchSession?.isActive && (
+                    <span>Contador lote: <strong className="text-accent-blue">{batchSession.packagesScanned}</strong></span>
+                  )}
                 </div>
-                <div>
-                  Última actualización: {format(new Date(), 'HH:mm:ss', { locale: es })}
+                <div className="flex items-center gap-4">
+                  {batchSession?.isActive && (
+                    <div className="text-accent-blue">
+                      Tarima: <strong>{batchSession.defaultValues.numeroTarima}</strong>
+                    </div>
+                  )}
+                  <div>
+                    Última actualización: {format(new Date(), 'HH:mm:ss', { locale: es })}
+                  </div>
                 </div>
               </div>
             </div>

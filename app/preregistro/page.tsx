@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -16,6 +17,7 @@ import { ActionToolbar } from "@/components/preregistro/ActionToolbar"
 import { CIDocumentViewer } from "@/components/preregistro/CIDocumentViewer"
 import { AIContentScanner } from "@/components/preregistro/AIContentScanner"
 import { SessionHistory, ProcessedPackage } from "@/components/preregistro/SessionHistory"
+import { BatchModePanel } from "@/components/preregistro/BatchModePanel"
 import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { useToast } from "@/hooks/use-toast"
 import * as Sentry from "@sentry/nextjs"
@@ -26,6 +28,20 @@ interface PreRegistroForm {
   contenido: string
   peso: string
   numeroTarima: string
+}
+
+interface BatchSession {
+  id: string
+  isActive: boolean
+  startedAt: Date
+  packagesScanned: number
+  defaultValues: {
+    contenido: string
+    peso: string
+    numeroTarima: string
+    numeroCasillero: string
+  }
+  status: 'active' | 'paused' | 'completed'
 }
 
 // Helper function to generate pallet options
@@ -79,6 +95,10 @@ function PreRegistroContent() {
   
   // Session management
   const [processedPackages, setProcessedPackages] = useState<ProcessedPackage[]>([])
+  
+  // Batch mode state
+  const [batchSession, setBatchSession] = useState<BatchSession | null>(null)
+  const [showBatchPanel, setShowBatchPanel] = useState(false)
   
   // Combobox state for casillero
   const [casilleroOpen, setCasilleroOpen] = useState(false)
@@ -157,13 +177,35 @@ function PreRegistroContent() {
         // Add to session history
         setProcessedPackages(prev => [...prev, newPackage])
         
-        // Reset form
-        resetForm()
+        // Update batch session if active
+        if (batchSession?.isActive && batchSession.status === 'active') {
+          setBatchSession(prev => prev ? { 
+            ...prev, 
+            packagesScanned: prev.packagesScanned + 1 
+          } : null)
+        }
+        
+        // Reset form - maintain batch defaults if in batch mode
+        if (batchSession?.isActive && batchSession.status === 'active') {
+          resetFormForBatch()
+        } else {
+          resetForm()
+        }
         
         toast({
           title: "Paquete procesado",
-          description: `Tracking ${formData.numeroTracking} agregado al historial`,
+          description: batchSession?.isActive 
+            ? `Tracking ${formData.numeroTracking} - Lote: ${batchSession.packagesScanned + 1} paquetes`
+            : `Tracking ${formData.numeroTracking} agregado al historial`,
         })
+        
+        // Auto-focus tracking input for rapid scanning in batch mode
+        if (batchSession?.isActive && batchSession.status === 'active') {
+          setTimeout(() => {
+            trackingInputRef.current?.focus()
+            trackingInputRef.current?.select()
+          }, 100)
+        }
       })
     } catch (error) {
       Sentry.captureException(error, {
@@ -190,6 +232,20 @@ function PreRegistroContent() {
     })
   }
 
+  const resetFormForBatch = () => {
+    if (batchSession?.defaultValues) {
+      setFormData({
+        numeroTracking: "", // Always clear tracking number
+        numeroCasillero: batchSession.defaultValues.numeroCasillero,
+        contenido: batchSession.defaultValues.contenido,
+        peso: batchSession.defaultValues.peso,
+        numeroTarima: batchSession.defaultValues.numeroTarima
+      })
+    } else {
+      resetForm()
+    }
+  }
+
   // Toolbar handlers
   const handleScanToggle = () => {
     setScannerMode(true)
@@ -209,10 +265,117 @@ function PreRegistroContent() {
   }
 
   const handleBatchMode = () => {
+    if (batchSession?.isActive) {
+      // Toggle batch panel if session is active
+      setShowBatchPanel(!showBatchPanel)
+    } else {
+      // Start new batch session
+      startBatchSession()
+    }
+  }
+
+  const startBatchSession = () => {
+    const newSession: BatchSession = {
+      id: `batch_${Date.now()}`,
+      isActive: true,
+      startedAt: new Date(),
+      packagesScanned: 0,
+      defaultValues: {
+        contenido: formData.contenido || "",
+        peso: formData.peso || "",
+        numeroTarima: formData.numeroTarima || palletOptions[0]?.value || "",
+        numeroCasillero: formData.numeroCasillero || ""
+      },
+      status: 'active'
+    }
+    
+    setBatchSession(newSession)
+    setShowBatchPanel(true)
+    
+    // Apply default values to form
+    applyBatchDefaults(newSession.defaultValues)
+    
     toast({
-      title: "Modo lote",
-      description: "Función en desarrollo",
+      title: "Modo lote iniciado",
+      description: `Sesión ${newSession.id.split('_')[1]} creada. Los valores actuales se usarán como predeterminados.`,
+      duration: 4000,
     })
+  }
+
+  const applyBatchDefaults = (defaults: BatchSession['defaultValues']) => {
+    setFormData(prev => ({
+      numeroTracking: prev.numeroTracking, // Keep current tracking number
+      numeroCasillero: defaults.numeroCasillero || prev.numeroCasillero,
+      contenido: defaults.contenido || prev.contenido,
+      peso: defaults.peso || prev.peso,
+      numeroTarima: defaults.numeroTarima || prev.numeroTarima
+    }))
+  }
+
+  const completeBatchSession = () => {
+    if (batchSession) {
+      setBatchSession(prev => prev ? { ...prev, status: 'completed', isActive: false } : null)
+      setShowBatchPanel(false)
+      
+      toast({
+        title: "Sesión de lote completada",
+        description: `${batchSession.packagesScanned} paquetes procesados en total.`,
+      })
+    }
+  }
+
+  const pauseBatchSession = () => {
+    if (batchSession) {
+      setBatchSession(prev => prev ? { ...prev, status: 'paused' } : null)
+      
+      toast({
+        title: "Sesión de lote pausada",
+        description: "La sesión se ha pausado temporalmente.",
+      })
+    }
+  }
+
+  const resumeBatchSession = () => {
+    if (batchSession) {
+      setBatchSession(prev => prev ? { ...prev, status: 'active' } : null)
+      
+      toast({
+        title: "Sesión de lote reanudada",
+        description: "La sesión continúa activa.",
+      })
+    }
+  }
+
+  const handleStartBatchSession = (defaultValues: BatchSession['defaultValues']) => {
+    const newSession: BatchSession = {
+      id: `batch_${Date.now()}`,
+      isActive: true,
+      startedAt: new Date(),
+      packagesScanned: 0,
+      defaultValues,
+      status: 'active'
+    }
+    
+    setBatchSession(newSession)
+    applyBatchDefaults(defaultValues)
+    
+    toast({
+      title: "Modo lote iniciado",
+      description: `Sesión ${newSession.id.split('_')[1]} creada con valores predeterminados.`,
+      duration: 4000,
+    })
+  }
+
+  const handleUpdateBatchDefaults = (defaults: BatchSession['defaultValues']) => {
+    if (batchSession) {
+      setBatchSession(prev => prev ? { ...prev, defaultValues: defaults } : null)
+      applyBatchDefaults(defaults)
+      
+      toast({
+        title: "Valores actualizados",
+        description: "Los valores predeterminados del lote han sido actualizados.",
+      })
+    }
   }
 
   const handlePrintLabels = () => {
@@ -337,9 +500,25 @@ function PreRegistroContent() {
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[60vh]">
         {/* Left Column: Package Information Form */}
-        <Card className="flex flex-col h-fit">
+        <Card className={cn(
+          "flex flex-col h-fit transition-all duration-200",
+          batchSession?.isActive && batchSession.status === 'active' && "border-accent-blue/50 bg-accent-blue/5"
+        )}>
           <CardHeader>
-            <CardTitle>Información del Paquete</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <span>Información del Paquete</span>
+              {batchSession?.isActive && (
+                <Badge 
+                  variant={batchSession.status === 'active' ? 'default' : 'secondary'}
+                  className={cn(
+                    "text-xs",
+                    batchSession.status === 'active' && "bg-green-600 animate-pulse"
+                  )}
+                >
+                  {batchSession.status === 'active' ? '⚡ Modo Lote' : '⏸️ Pausado'}
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
@@ -431,7 +610,14 @@ function PreRegistroContent() {
             {/* Contenido */}
             <div className="space-y-2">
               <Label htmlFor="contenido" className="text-sm font-medium flex items-center justify-between">
-                Contenido
+                <div className="flex items-center gap-2">
+                  Contenido
+                  {batchSession?.isActive && batchSession.defaultValues.contenido && (
+                    <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
+                      Auto-llenado
+                    </Badge>
+                  )}
+                </div>
                 <AIContentScanner 
                   onContentGenerated={handleContentGenerated}
                   disabled={!formData.numeroTracking}
@@ -441,15 +627,27 @@ function PreRegistroContent() {
                 id="contenido"
                 value={formData.contenido}
                 onChange={(e) => handleInputChange("contenido", e.target.value)}
-                placeholder="Describe el contenido del paquete o usa el escáner IA"
-                className="w-full min-h-[100px]"
+                placeholder={
+                  batchSession?.isActive && batchSession.defaultValues.contenido 
+                    ? "Valor predeterminado del lote aplicado" 
+                    : "Describe el contenido del paquete o usa el escáner IA"
+                }
+                className={cn(
+                  "w-full min-h-[100px] transition-all duration-200",
+                  batchSession?.isActive && batchSession.defaultValues.contenido && "bg-accent-blue/5 border-accent-blue/30"
+                )}
               />
             </div>
 
             {/* Peso */}
             <div className="space-y-2">
-              <Label htmlFor="peso" className="text-sm font-medium">
+              <Label htmlFor="peso" className="text-sm font-medium flex items-center gap-2">
                 Peso
+                {batchSession?.isActive && batchSession.defaultValues.peso && (
+                  <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
+                    Auto-llenado
+                  </Badge>
+                )}
               </Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -459,8 +657,15 @@ function PreRegistroContent() {
                   min="0"
                   value={formData.peso}
                   onChange={(e) => handleInputChange("peso", e.target.value)}
-                  placeholder="2.5"
-                  className="w-full"
+                  placeholder={
+                    batchSession?.isActive && batchSession.defaultValues.peso
+                      ? "Valor predeterminado del lote"
+                      : "2.5"
+                  }
+                  className={cn(
+                    "w-full transition-all duration-200",
+                    batchSession?.isActive && batchSession.defaultValues.peso && "bg-accent-blue/5 border-accent-blue/30"
+                  )}
                 />
                 <span className="text-sm text-muted-foreground">kg</span>
               </div>
@@ -468,15 +673,23 @@ function PreRegistroContent() {
 
             {/* Número de Tarima - Required */}
             <div className="space-y-2">
-              <Label htmlFor="numeroTarima" className="text-sm font-medium">
+              <Label htmlFor="numeroTarima" className="text-sm font-medium flex items-center gap-2">
                 Número de Tarima <span className="text-red-500">*</span>
+                {batchSession?.isActive && batchSession.defaultValues.numeroTarima && (
+                  <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
+                    Auto-llenado
+                  </Badge>
+                )}
               </Label>
               <Select 
                 value={formData.numeroTarima} 
                 onValueChange={(value) => handleInputChange("numeroTarima", value)}
                 required
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={cn(
+                  "w-full transition-all duration-200",
+                  batchSession?.isActive && batchSession.defaultValues.numeroTarima && "bg-accent-blue/5 border-accent-blue/30"
+                )}>
                   <SelectValue placeholder="- Seleccione una tarima -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -493,19 +706,31 @@ function PreRegistroContent() {
             <div className="flex gap-4 pt-6">
               <Button 
                 type="submit" 
-                className="bg-accent-blue hover:bg-accent-blue/90 text-white px-8"
-                disabled={!formData.numeroTracking.trim() || !formData.numeroTarima.trim()}
+                className={cn(
+                  "px-8 transition-all duration-200",
+                  batchSession?.isActive && batchSession.status === 'active'
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-accent-blue hover:bg-accent-blue/90 text-white"
+                )}
+                disabled={
+                  !formData.numeroTracking.trim() || 
+                  !formData.numeroTarima.trim() ||
+                  (batchSession?.isActive && batchSession.status === 'paused')
+                }
               >
-                Procesar
+                {batchSession?.isActive && batchSession.status === 'active' 
+                  ? `Escanear Lote (${batchSession.packagesScanned + 1})`
+                  : 'Procesar'
+                }
                 <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-white/20 rounded">Ctrl+S</kbd>
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={resetForm}
+                onClick={batchSession?.isActive ? resetFormForBatch : resetForm}
                 className="px-8"
               >
-                Limpiar
+                {batchSession?.isActive ? 'Siguiente' : 'Limpiar'}
                 <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-muted rounded">Ctrl+R</kbd>
               </Button>
             </div>
@@ -513,12 +738,25 @@ function PreRegistroContent() {
           </CardContent>
         </Card>
 
-        {/* Right Column: CI Document Viewer */}
-        <div className="h-fit">
+        {/* Right Column: CI Document Viewer and Batch Panel */}
+        <div className="h-fit space-y-6">
           <CIDocumentViewer
             ciNumber={formData.numeroTracking ? "1234567" : undefined}
             pdfUrl={formData.numeroTracking ? "/sample-ci-document.pdf" : undefined}
             isLoading={false}
+          />
+          
+          {/* Batch Mode Panel */}
+          <BatchModePanel
+            session={batchSession}
+            onStartSession={handleStartBatchSession}
+            onPauseSession={pauseBatchSession}
+            onResumeSession={resumeBatchSession}
+            onCompleteSession={completeBatchSession}
+            onUpdateDefaults={handleUpdateBatchDefaults}
+            palletOptions={palletOptions}
+            isVisible={showBatchPanel}
+            onToggleVisibility={() => setShowBatchPanel(!showBatchPanel)}
           />
         </div>
       </div>
@@ -526,6 +764,7 @@ function PreRegistroContent() {
       {/* Session History */}
       <SessionHistory
         packages={processedPackages}
+        batchSession={batchSession}
         onClearSession={handleClearSession}
         onExportSession={handleExportSession}
       />

@@ -65,7 +65,8 @@ export function validateCompanyEmail(email: string): boolean {
       'angie@hotmail.com',
       'brayan@hotmail.com',
       'andreycubero21@gmail.com',
-      'acslogisticacr@gmail.com'
+      'acslogisticacr@gmail.com',
+      'bypbrayan@hotmail.com'
     ]
     
     return allowedEmails.includes(normalizedEmail)

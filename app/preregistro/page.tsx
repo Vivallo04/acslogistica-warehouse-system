@@ -471,7 +471,7 @@ function PreRegistroContent() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [formData])
+  }, [formData, handleScanToggle, handleBatchMode, handlePrintLabels, handleReports, handleSettings, toast])
 
   return (
     <div className="p-6 space-y-6">

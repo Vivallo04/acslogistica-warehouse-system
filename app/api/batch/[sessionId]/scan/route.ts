@@ -22,10 +22,10 @@ const batchSessions = new Map<string, any>()
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = params.sessionId
+    const { sessionId } = await params
     const body = await request.json()
 
     // Validate session exists
@@ -125,10 +125,11 @@ export async function POST(
     }, { status: 201 })
 
   } catch (error) {
+    const { sessionId } = await params
     Sentry.captureException(error, {
       tags: {
         section: 'batch-scan',
-        sessionId: params.sessionId
+        sessionId: sessionId
       }
     })
 
@@ -143,10 +144,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = params.sessionId
+    const { sessionId } = await params
     const searchParams = request.nextUrl.searchParams
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
@@ -185,10 +186,11 @@ export async function GET(
     })
 
   } catch (error) {
+    const { sessionId } = await params
     Sentry.captureException(error, {
       tags: {
         section: 'batch-scan-list',
-        sessionId: params.sessionId
+        sessionId: sessionId
       }
     })
 
@@ -203,10 +205,10 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = params.sessionId
+    const { sessionId } = await params
     const searchParams = request.nextUrl.searchParams
     const scanId = searchParams.get('scan_id')
 
@@ -271,10 +273,11 @@ export async function DELETE(
     })
 
   } catch (error) {
+    const { sessionId } = await params
     Sentry.captureException(error, {
       tags: {
         section: 'batch-scan-delete',
-        sessionId: params.sessionId
+        sessionId: sessionId
       }
     })
 

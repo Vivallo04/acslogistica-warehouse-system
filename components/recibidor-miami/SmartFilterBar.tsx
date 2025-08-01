@@ -142,11 +142,10 @@ export function SmartFilterBar({
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="Prealertado">Prealertado</SelectItem>
-                <SelectItem value="Recibido">Recibido</SelectItem>
-                <SelectItem value="Procesando">Procesando</SelectItem>
-                <SelectItem value="Enviado">Enviado</SelectItem>
+                <SelectItem value="En aduana">En aduana</SelectItem>
+                <SelectItem value="Vuelo Asignado">Vuelo Asignado</SelectItem>
                 {/* Dynamic states from API */}
-                {availableStates.filter(state => !['Prealertado', 'Recibido', 'Procesando', 'Enviado'].includes(state)).map(state => (
+                {availableStates.filter(state => !['Prealertado', 'En aduana', 'Vuelo Asignado', 'Procesando'].includes(state)).map(state => (
                   <SelectItem key={state} value={state}>{state}</SelectItem>
                 ))}
               </SelectContent>

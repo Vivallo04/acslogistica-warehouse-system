@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Search, Package, Clock, AlertTriangle, Zap, User, Hash } from "lucide-react"
+import { Search, Package, Clock, AlertTriangle, Zap, User, Hash, Building2, Plane } from "lucide-react"
 import { useFastSearch, type SearchResult, type PackageSearchResult } from "@/hooks/useFastSearch"
 
 interface SearchHeroProps {
@@ -38,28 +38,20 @@ const quickActions: QuickAction[] = [
     color: "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
   },
   {
-    id: "recibidos",
-    label: "Recibidos",
-    icon: Package,
+    id: "en-aduana",
+    label: "En aduana",
+    icon: Building2,
     filterType: "estado",
-    filterValue: "Recibido",
+    filterValue: "En aduana",
     color: "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800"
   },
   {
-    id: "procesando",
-    label: "Procesando",
-    icon: AlertTriangle,
+    id: "vuelo-asignado",
+    label: "Vuelo Asignado",
+    icon: Plane,
     filterType: "estado", 
-    filterValue: "Procesando",
+    filterValue: "Vuelo Asignado",
     color: "bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/20 dark:text-orange-400 border border-orange-200 dark:border-orange-800"
-  },
-  {
-    id: "enviados",
-    label: "Enviados",
-    icon: Zap,
-    filterType: "estado",
-    filterValue: "Enviado",
-    color: "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/20 dark:text-purple-400 border border-purple-200 dark:border-purple-800"
   }
 ]
 

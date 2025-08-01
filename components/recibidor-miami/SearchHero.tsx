@@ -113,7 +113,7 @@ export function SearchHero({
     return () => {
       if (timeout) clearTimeout(timeout)
     }
-  }, [searchValue, performFastSearch, searchTimeout])
+  }, [searchValue, performFastSearch])
 
   // Clear results when search is empty
   useEffect(() => {

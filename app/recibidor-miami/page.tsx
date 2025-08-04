@@ -159,9 +159,14 @@ function RecibidorMiamiContent() {
         setPackages(data.data)
         setTotalCount(data.totalCount)
         
-        // Show success toast only if it's not the initial load
-        if (filters.pagina > 1 || Object.values(filters).some(value => 
-          value !== "" && value !== "all" && value !== undefined && value !== DEFAULT_PAGE_SIZE && value !== 1)) {
+        // Show success toast only on filter changes or initial load (not on page changes)
+        const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+          if (key === 'pagina' || key === 'elementosPorPagina') return false
+          return value !== "" && value !== "all" && value !== undefined && value !== DEFAULT_PAGE_SIZE && value !== 1
+        })
+        
+        // Show toast on initial load (page 1) or when filters are applied (regardless of page)
+        if (filters.pagina === 1 || hasActiveFilters) {
           toast({
             title: "Paquetes cargados",
             description: `Se encontraron ${data.totalCount.toLocaleString()} paquetes`,
@@ -753,7 +758,7 @@ function RecibidorMiamiContent() {
                         size="sm"
                         onClick={() => handleFastSearchPageChange(pageNum)}
                         disabled={isPaginationLoading}
-                        className="w-8 h-8 rounded-full"
+                        className="min-w-8 h-8 rounded-full px-3"
                       >
                         {pageNum}
                       </Button>
@@ -793,20 +798,82 @@ function RecibidorMiamiContent() {
                 </Button>
                 
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                    const pageNum = i + 1
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={filters.pagina === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(pageNum)}
-                        className="w-8 h-8 rounded-full"
-                      >
-                        {pageNum}
-                      </Button>
-                    )
-                  })}
+                  {(() => {
+                    const currentPage = filters.pagina
+                    const maxButtons = 7 // Show up to 7 page buttons
+                    
+                    // Calculate start and end page numbers to show
+                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2))
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1)
+                    
+                    // Adjust start if we're near the end
+                    if (endPage - startPage + 1 < maxButtons) {
+                      startPage = Math.max(1, endPage - maxButtons + 1)
+                    }
+                    
+                    const pages = []
+                    
+                    // Add first page if not in range
+                    if (startPage > 1) {
+                      pages.push(
+                        <Button
+                          key={1}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(1)}
+                          className="min-w-8 h-8 rounded-full px-3"
+                        >
+                          1
+                        </Button>
+                      )
+                      if (startPage > 2) {
+                        pages.push(
+                          <span key="ellipsis1" className="px-2 text-muted-foreground">
+                            ...
+                          </span>
+                        )
+                      }
+                    }
+                    
+                    // Add page range
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <Button
+                          key={i}
+                          variant={currentPage === i ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(i)}
+                          className="min-w-8 h-8 rounded-full px-3"
+                        >
+                          {i}
+                        </Button>
+                      )
+                    }
+                    
+                    // Add last page if not in range
+                    if (endPage < totalPages) {
+                      if (endPage < totalPages - 1) {
+                        pages.push(
+                          <span key="ellipsis2" className="px-2 text-muted-foreground">
+                            ...
+                          </span>
+                        )
+                      }
+                      pages.push(
+                        <Button
+                          key={totalPages}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(totalPages)}
+                          className="min-w-8 h-8 rounded-full px-3"
+                        >
+                          {totalPages}
+                        </Button>
+                      )
+                    }
+                    
+                    return pages
+                  })()}
                 </div>
                 
                 <Button

@@ -78,13 +78,13 @@ export function AdvancedFilters({
   activeFiltersCount
 }: AdvancedFiltersProps) {
   const isTrackingActive = !!(filters.buscarPorTracking && filters.buscarPorTracking.trim() !== '')
-  const isGuiaActive = !!(filters.guiaAerea && filters.guiaAerea.trim() !== '')
+  const isGuiaActive = false // Disabled filter
   const isTarimaActive = !!(filters.numeroTarima && filters.numeroTarima !== 'all')
   const isClienteActive = !!(filters.buscarPorCliente && filters.buscarPorCliente.trim() !== '')
   const isCiPaqueteActive = !!(filters.ciPaquete && filters.ciPaquete.trim() !== '')
   const isPageSizeActive = filters.elementosPorPagina !== 25
 
-  const hasActiveAdvancedFilters = isTrackingActive || isGuiaActive || isTarimaActive || isClienteActive || isCiPaqueteActive || isPageSizeActive
+  const hasActiveAdvancedFilters = isTrackingActive || isTarimaActive || isClienteActive || isCiPaqueteActive || isPageSizeActive
 
   return (
     <div className="space-y-4">
@@ -118,8 +118,8 @@ export function AdvancedFilters({
                 />
               </div>
 
-              {/* Guía Aérea */}
-              <div className="space-y-3">
+              {/* Guía Aérea - Disabled */}
+              <div className="space-y-3 opacity-50">
                 <Label htmlFor="advanced-guia" className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 sm:gap-2">
                   <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span className="text-xs sm:text-sm">Guía Aérea</span>
@@ -130,6 +130,7 @@ export function AdvancedFilters({
                   value={filters.guiaAerea}
                   onChange={(e) => onFilterChange('guiaAerea', e.target.value)}
                   className="rounded-xl border-2 transition-all duration-200 focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/20"
+                  disabled
                 />
               </div>
 
@@ -145,9 +146,34 @@ export function AdvancedFilters({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas las tarimas</SelectItem>
-                    {availableTarimas.map(tarima => (
-                      <SelectItem key={tarima} value={tarima}>Tarima {tarima}</SelectItem>
-                    ))}
+                    {(() => {
+                      // Get current month in MMYY format (e.g., "0825" for August 2025)
+                      const now = new Date()
+                      const currentMonth = String(now.getMonth() + 1).padStart(2, '0')
+                      const currentYear = String(now.getFullYear()).slice(-2)
+                      const currentMonthPattern = `${currentMonth}${currentYear}`
+                      
+                      // Sort tarimas: current month first, then the rest
+                      const sortedTarimas = [...availableTarimas].sort((a, b) => {
+                        const aIsCurrentMonth = a.includes(currentMonthPattern)
+                        const bIsCurrentMonth = b.includes(currentMonthPattern)
+                        
+                        if (aIsCurrentMonth && !bIsCurrentMonth) return -1
+                        if (!aIsCurrentMonth && bIsCurrentMonth) return 1
+                        
+                        // Within the same group (current month or others), sort naturally
+                        return a.localeCompare(b, undefined, { numeric: true })
+                      })
+                      
+                      return sortedTarimas.map(tarima => (
+                        <SelectItem key={tarima} value={tarima}>
+                          Tarima {tarima}
+                          {tarima.includes(currentMonthPattern) && (
+                            <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">• Este mes</span>
+                          )}
+                        </SelectItem>
+                      ))
+                    })()}
                   </SelectContent>
                 </Select>
               </div>
@@ -193,6 +219,10 @@ export function AdvancedFilters({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Show "Show All" option only when a specific tarima is selected */}
+                    {isTarimaActive && (
+                      <SelectItem value="1000">Mostrar todos (esta tarima)</SelectItem>
+                    )}
                     <SelectItem value="10">10 por página</SelectItem>
                     <SelectItem value="25">25 por página</SelectItem>
                     <SelectItem value="50">50 por página</SelectItem>
@@ -218,13 +248,14 @@ export function AdvancedFilters({
             isActive={isTrackingActive}
           />
           
-          <AdvancedFilterChip
+          {/* Guía Aérea chip disabled */}
+          {false && <AdvancedFilterChip
             label="Guía"
             value={filters.guiaAerea}
             onClear={() => onClearFilter('guiaAerea')}
             icon={FileText}
             isActive={isGuiaActive}
-          />
+          />}
           
           <AdvancedFilterChip
             label="Tarima"
@@ -252,7 +283,7 @@ export function AdvancedFilters({
           
           <AdvancedFilterChip
             label="Por página"
-            value={filters.elementosPorPagina}
+            value={filters.elementosPorPagina === 1000 && isTarimaActive ? "Todos" : filters.elementosPorPagina}
             onClear={() => onFilterChange('elementosPorPagina', 25)}
             icon={Settings}
             isActive={isPageSizeActive}

@@ -325,7 +325,7 @@ function RecibidorMiamiContent() {
         }
       }
     })
-  }, [filters])
+  }, [filters, isInitialLoad, toast])
 
   // Fetch metadata
   const fetchMetadata = useCallback(async () => {
@@ -368,16 +368,16 @@ function RecibidorMiamiContent() {
 
   useEffect(() => {
     fetchPackages()
-  }, [filters])
+  }, [filters, fetchPackages])
 
   // Filter handlers
-  const handleFilterChange = (key: keyof PackageFilters, value: FilterValue) => {
+  const handleFilterChange = useCallback((key: keyof PackageFilters, value: FilterValue) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
       pagina: 1 // Reset to first page when filter changes
     }))
-  }
+  }, [])
 
   const handlePageChange = (newPage: number) => {
     setFilters(prev => ({ ...prev, pagina: newPage }))
@@ -635,6 +635,11 @@ function RecibidorMiamiContent() {
 
   // Cleanup timeouts and abort controllers on unmount to prevent memory leaks
   useEffect(() => {
+    // Capture ref values at effect creation time
+    const fetchController = fetchAbortControllerRef.current
+    const clientController = clientSearchAbortControllerRef.current
+    const ciPaqueteController = ciPaqueteSearchAbortControllerRef.current
+    
     return () => {
       if (searchTimeout) {
         clearTimeout(searchTimeout)
@@ -648,15 +653,15 @@ function RecibidorMiamiContent() {
       if (advancedTrackingTimeout) {
         clearTimeout(advancedTrackingTimeout)
       }
-      // Cancel any ongoing requests
-      if (fetchAbortControllerRef.current) {
-        fetchAbortControllerRef.current.abort()
+      // Cancel any ongoing requests using captured values
+      if (fetchController) {
+        fetchController.abort()
       }
-      if (clientSearchAbortControllerRef.current) {
-        clientSearchAbortControllerRef.current.abort()
+      if (clientController) {
+        clientController.abort()
       }
-      if (ciPaqueteSearchAbortControllerRef.current) {
-        ciPaqueteSearchAbortControllerRef.current.abort()
+      if (ciPaqueteController) {
+        ciPaqueteController.abort()
       }
     }
   }, [searchTimeout, ciPaqueteTimeout, clientTimeout, advancedTrackingTimeout])

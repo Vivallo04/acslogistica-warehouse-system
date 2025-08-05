@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -247,7 +247,7 @@ function PreRegistroContent() {
   }
 
   // Toolbar handlers
-  const handleScanToggle = () => {
+  const handleScanToggle = useCallback(() => {
     setScannerMode(true)
     
     // Focus on tracking input using ref
@@ -262,19 +262,9 @@ function PreRegistroContent() {
     
     // Reset scanner mode after 10 seconds if no input
     setTimeout(() => setScannerMode(false), 10000)
-  }
+  }, [toast])
 
-  const handleBatchMode = () => {
-    if (batchSession?.isActive) {
-      // Toggle batch panel if session is active
-      setShowBatchPanel(!showBatchPanel)
-    } else {
-      // Start new batch session
-      startBatchSession()
-    }
-  }
-
-  const startBatchSession = () => {
+  const startBatchSession = useCallback(() => {
     const newSession: BatchSession = {
       id: `batch_${Date.now()}`,
       isActive: true,
@@ -300,7 +290,17 @@ function PreRegistroContent() {
       description: `Sesión ${newSession.id.split('_')[1]} creada. Los valores actuales se usarán como predeterminados.`,
       duration: 4000,
     })
-  }
+  }, [formData.contenido, formData.peso, formData.numeroTarima, formData.numeroCasillero, palletOptions, toast])
+
+  const handleBatchMode = useCallback(() => {
+    if (batchSession?.isActive) {
+      // Toggle batch panel if session is active
+      setShowBatchPanel(!showBatchPanel)
+    } else {
+      // Start new batch session
+      startBatchSession()
+    }
+  }, [batchSession?.isActive, showBatchPanel, startBatchSession])
 
   const applyBatchDefaults = (defaults: BatchSession['defaultValues']) => {
     setFormData(prev => ({
@@ -378,27 +378,27 @@ function PreRegistroContent() {
     }
   }
 
-  const handlePrintLabels = () => {
+  const handlePrintLabels = useCallback(() => {
     toast({
       title: "Imprimir etiquetas",
       description: "Función en desarrollo",
     })
-  }
+  }, [toast])
 
-  const handleReports = () => {
+  const handleReports = useCallback(() => {
     toast({
       title: "Reportes",
       description: "Función en desarrollo",
     })
-  }
+  }, [toast])
 
 
-  const handleSettings = () => {
+  const handleSettings = useCallback(() => {
     toast({
       title: "Configuración",
       description: "Función en desarrollo",
     })
-  }
+  }, [toast])
 
   const handleAutoSyncToggle = (enabled: boolean) => {
     setAutoSync(enabled)

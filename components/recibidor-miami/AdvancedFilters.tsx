@@ -196,7 +196,7 @@ export function AdvancedFilters({
                         <Loader2 className="h-3 w-3 animate-spin" />
                         Buscando {advancedTrackingSearchState.searchType === 'tracking' ? 'tracking' : 
                                  advancedTrackingSearchState.searchType === 'client' ? 'cliente' : 
-                                 'tracking/cliente'} '{filters.buscarPorTracking}'...
+                                 'tracking/cliente'} &apos;{filters.buscarPorTracking}&apos;...
                       </span>
                     ) : advancedTrackingSearchState?.resultCount !== undefined ? (
                       <span className={cn(
@@ -336,7 +336,7 @@ export function AdvancedFilters({
                     {clientSearchState?.isSearching ? (
                       <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1">
                         <Loader2 className="h-3 w-3 animate-spin" />
-                        Buscando clientes con '{filters.buscarPorCliente}'...
+                        Buscando clientes con &apos;{filters.buscarPorCliente}&apos;...
                       </span>
                     ) : clientSearchState?.resultCount !== undefined ? (
                       <span className={cn(

@@ -191,7 +191,7 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
                       <span className="text-sm font-medium">Agregado</span>
                     </div>
                     <ul className="ml-6 space-y-1 text-sm text-muted-foreground">
-                      <li>• Botón "What's New" para mostrar actualizaciones</li>
+                      <li>• Botón &quot;What&apos;s New&quot; para mostrar actualizaciones</li>
                       <li>• Campo Peso obligatorio en pre-registro</li>
                       <li>• Nuevo orden de campos mejorado</li>
                     </ul>

@@ -168,14 +168,66 @@ export function Sidebar() {
                 <span className="sr-only">Abrir menú de acciones</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="right" className="w-48">
-              <DropdownMenuItem onClick={() => setShowFeedbackDialog(true)}>
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Enviar Comentarios
+            <DropdownMenuContent align="start" side="right" className="w-56 p-2">
+                {/* Support Section */}
+                <div className="px-2 py-1.5">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Soporte
+                  </p>
+                </div>
+                
+              <DropdownMenuItem 
+                onClick={() => setShowFeedbackDialog(true)}
+                className="px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center mr-3">
+                    <MessageCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">Enviar Comentarios</span>
+                    <span className="text-xs text-muted-foreground">Comparte tu experiencia</span>
+                  </div>
+                </div>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowIssueDialog(true)}>
-                <Bug className="mr-2 h-4 w-4" />
-                Reportar Incidencia
+              
+              <DropdownMenuItem 
+                onClick={() => setShowIssueDialog(true)}
+                className="px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center mr-3">
+                    <Bug className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">Reportar Incidencia</span>
+                    <span className="text-xs text-muted-foreground">Reporta un problema</span>
+                  </div>
+                </div>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator className="my-2" />
+              
+              {/* Account Section */}
+              <div className="px-2 py-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Cuenta
+                </p>
+              </div>
+              
+              <DropdownMenuItem 
+                onClick={handleLogout}
+                className="px-3 py-2.5 cursor-pointer transition-colors hover:bg-red-50 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+              >
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/50 flex items-center justify-center mr-3">
+                    <LogOut className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">Cerrar Sesión</span>
+                    <span className="text-xs text-muted-foreground">Salir del sistema</span>
+                  </div>
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -183,16 +235,8 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border space-y-3">
-        <Button
-          variant="outline"
-          onClick={handleLogout}
-          className="w-full justify-center gap-2 text-destructive border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30 transition-all duration-200 rounded-full"
-        >
-          <LogOut className="w-4 h-4" />
-          Cerrar Sesión
-        </Button>
-        <div className="text-xs text-muted-foreground/60 text-center">Versión 1.0.0</div>
+      <div className="p-4 border-t border-border">
+        <div className="text-xs text-muted-foreground/60 text-center">Versión 1.2.0</div>
       </div>
       
       {/* Feedback Dialogs */}

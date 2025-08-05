@@ -522,33 +522,37 @@ function PreRegistroContent() {
           </CardHeader>
           <CardContent className="flex-1">
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-            {/* Número de Tracking - Required */}
+            {/* Peso */}
             <div className="space-y-2">
-              <Label htmlFor="numeroTracking" className="text-sm font-medium flex items-center gap-2">
-                Número de Tracking <span className="text-red-500">*</span>
-                {scannerMode && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    Modo Escáner
-                  </span>
+              <Label htmlFor="peso" className="text-sm font-medium flex items-center gap-2">
+                Peso <span className="text-red-500">*</span>
+                {batchSession?.isActive && batchSession.defaultValues.peso && (
+                  <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
+                    Auto-llenado
+                  </Badge>
                 )}
               </Label>
-              <Input
-                id="numeroTracking"
-                ref={trackingInputRef}
-                type="text"
-                value={formData.numeroTracking}
-                onChange={(e) => handleTrackingInputChange(e.target.value)}
-                onKeyDown={handleTrackingKeyDown}
-                placeholder={scannerMode ? "Escanea el código de barras..." : "Ingresa el número de tracking"}
-                required
-                autoComplete="off"
-                spellCheck={false}
-                className={cn(
-                  "w-full font-mono transition-all duration-200",
-                  scannerMode && "ring-2 ring-green-500 border-green-500 bg-green-50"
-                )}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="peso"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={formData.peso}
+                  onChange={(e) => handleInputChange("peso", e.target.value)}
+                  placeholder={
+                    batchSession?.isActive && batchSession.defaultValues.peso
+                      ? "Valor predeterminado del lote"
+                      : "2.5"
+                  }
+                  required
+                  className={cn(
+                    "w-full transition-all duration-200",
+                    batchSession?.isActive && batchSession.defaultValues.peso && "bg-accent-blue/5 border-accent-blue/30"
+                  )}
+                />
+                <span className="text-sm text-muted-foreground">kg</span>
+              </div>
             </div>
 
             {/* Número de Casillero / Cliente Asignado */}
@@ -639,37 +643,33 @@ function PreRegistroContent() {
               />
             </div>
 
-            {/* Peso */}
+            {/* Número de Tracking - Required */}
             <div className="space-y-2">
-              <Label htmlFor="peso" className="text-sm font-medium flex items-center gap-2">
-                Peso <span className="text-red-500">*</span>
-                {batchSession?.isActive && batchSession.defaultValues.peso && (
-                  <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
-                    Auto-llenado
-                  </Badge>
+              <Label htmlFor="numeroTracking" className="text-sm font-medium flex items-center gap-2">
+                Número de Tracking <span className="text-red-500">*</span>
+                {scannerMode && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Modo Escáner
+                  </span>
                 )}
               </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="peso"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.peso}
-                  onChange={(e) => handleInputChange("peso", e.target.value)}
-                  placeholder={
-                    batchSession?.isActive && batchSession.defaultValues.peso
-                      ? "Valor predeterminado del lote"
-                      : "2.5"
-                  }
-                  required
-                  className={cn(
-                    "w-full transition-all duration-200",
-                    batchSession?.isActive && batchSession.defaultValues.peso && "bg-accent-blue/5 border-accent-blue/30"
-                  )}
-                />
-                <span className="text-sm text-muted-foreground">kg</span>
-              </div>
+              <Input
+                id="numeroTracking"
+                ref={trackingInputRef}
+                type="text"
+                value={formData.numeroTracking}
+                onChange={(e) => handleTrackingInputChange(e.target.value)}
+                onKeyDown={handleTrackingKeyDown}
+                placeholder={scannerMode ? "Escanea el código de barras..." : "Ingresa el número de tracking"}
+                required
+                autoComplete="off"
+                spellCheck={false}
+                className={cn(
+                  "w-full font-mono transition-all duration-200",
+                  scannerMode && "ring-2 ring-green-500 border-green-500 bg-green-50"
+                )}
+              />
             </div>
 
             {/* Número de Tarima - Required */}

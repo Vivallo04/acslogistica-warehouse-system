@@ -92,6 +92,7 @@ function RecibidorMiamiContent() {
   const [fastSearchResults, setFastSearchResults] = useState<PackageSearchResult[] | null>(null)
   const [fastSearchMeta, setFastSearchMeta] = useState<SearchResult | null>(null)
   const [isPaginationLoading, setIsPaginationLoading] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   
   // Filter state
   const [filters, setFilters] = useState<PackageFilters>({
@@ -159,18 +160,23 @@ function RecibidorMiamiContent() {
         setPackages(data.data)
         setTotalCount(data.totalCount)
         
-        // Show success toast only on filter changes or initial load (not on page changes)
+        // Show success toast only on filter changes (not on initial load or page changes)
         const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
           if (key === 'pagina' || key === 'elementosPorPagina') return false
           return value !== "" && value !== "all" && value !== undefined && value !== DEFAULT_PAGE_SIZE && value !== 1
         })
         
-        // Show toast on initial load (page 1) or when filters are applied (regardless of page)
-        if (filters.pagina === 1 || hasActiveFilters) {
+        // Show toast only when filters are applied and not on initial load
+        if (!isInitialLoad && (hasActiveFilters || filters.pagina === 1)) {
           toast({
             title: "Paquetes cargados",
             description: `Se encontraron ${data.totalCount.toLocaleString()} paquetes`,
           })
+        }
+        
+        // Mark initial load as complete
+        if (isInitialLoad) {
+          setIsInitialLoad(false)
         }
       } else {
         throw new Error(data.message || 'Failed to fetch packages')
@@ -211,7 +217,7 @@ function RecibidorMiamiContent() {
         setLoading(false)
       }
     })
-  }, [filters, toast])
+  }, [filters])
 
   // Fetch metadata
   const fetchMetadata = useCallback(async () => {
@@ -254,7 +260,7 @@ function RecibidorMiamiContent() {
 
   useEffect(() => {
     fetchPackages()
-  }, [fetchPackages])
+  }, [filters])
 
   // Filter handlers
   const handleFilterChange = (key: keyof PackageFilters, value: FilterValue) => {
@@ -433,7 +439,8 @@ function RecibidorMiamiContent() {
   const getActiveAdvancedFiltersCount = () => {
     let count = 0
     if (filters.numeroTarima && filters.numeroTarima !== 'all') count++
-    if (filters.guiaAerea && filters.guiaAerea.trim()) count++
+    // Guía Aérea filter is disabled, so don't count it
+    // if (filters.guiaAerea && filters.guiaAerea.trim()) count++
     if (filters.buscarPorCliente && filters.buscarPorCliente.trim()) count++
     if (filters.ciPaquete && filters.ciPaquete.trim()) count++
     if (filters.elementosPorPagina !== DEFAULT_PAGE_SIZE) count++

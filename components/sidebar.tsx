@@ -13,7 +13,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ThemeToggle } from "@/components/theme-toggle"
 import { FeedbackDialog } from "@/components/FeedbackDialog"
 import { ReportIssueDialog } from "@/components/ReportIssueDialog"
-import { Home, LogOut, User, MessageCircle, Bug, MoreVertical, Package, Plane } from "lucide-react"
+import { WhatsNewDialog } from "@/components/WhatsNewDialog"
+import { Home, LogOut, User, MessageCircle, Bug, MoreVertical, Package, Plane, HelpCircle } from "lucide-react"
 
 const navigation = [
   {
@@ -128,9 +129,20 @@ export function Sidebar() {
       </nav>
 
 
-      {/* Theme Toggle */}
-      <div className="px-3 py-4">
+      {/* Theme Toggle and What's New */}
+      <div className="px-3 py-4 space-y-3">
         <ThemeToggle showText={true} />
+        
+        <WhatsNewDialog>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full rounded-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span className="text-sm">¿Qué hay de nuevo?</span>
+          </Button>
+        </WhatsNewDialog>
       </div>
 
       {/* User Info */}

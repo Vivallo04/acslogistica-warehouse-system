@@ -198,34 +198,13 @@ export function SmartFilterBar({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <div className="p-6 space-y-6 min-w-[420px]">
+              <div className="p-4 space-y-3">
                 {/* Header */}
-                <div className="text-center space-y-1">
-                  <div className="text-base font-semibold text-foreground">Seleccionar Rango de Fechas</div>
-                  <div className="text-sm text-muted-foreground">Elija la fecha de inicio y fin para filtrar los paquetes</div>
-                </div>
-                
-                {/* Current Selection Display */}
-                <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-lg p-4">
-                  <div className="text-xs font-medium text-accent-blue mb-3 text-center">RANGO SELECCIONADO</div>
-                  <div className="flex items-center justify-center gap-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-accent-blue" />
-                      <span className={filters.desde ? "text-foreground font-semibold" : "text-muted-foreground italic"}>
-                        {filters.desde ? format(filters.desde, "dd/MM/yyyy", { locale: es }) : "Fecha inicio"}
-                      </span>
-                    </div>
-                    <div className="text-accent-blue font-bold text-lg">→</div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-accent-blue" />
-                      <span className={filters.hasta ? "text-foreground font-semibold" : "text-muted-foreground italic"}>
-                        {filters.hasta ? format(filters.hasta, "dd/MM/yyyy", { locale: es }) : "Fecha fin"}
-                      </span>
-                    </div>
-                  </div>
+                <div className="text-sm font-medium text-center text-muted-foreground">
+                  Seleccionar fechas
                 </div>
 
-                {/* Single Calendar for Range Selection */}
+                {/* Calendar for Range Selection */}
                 <div className="flex justify-center">
                   <CalendarComponent
                     mode="range"
@@ -242,7 +221,7 @@ export function SmartFilterBar({
                         onFilterChange('hasta', undefined)
                       }
                     }}
-                    className="rounded-lg border-2 border-accent-blue/20"
+                    className="rounded-lg border border-accent-blue/20"
                     classNames={{
                       day_selected: "bg-accent-blue text-white hover:bg-accent-blue/90",
                       day_today: "bg-accent-blue/10 text-accent-blue font-semibold",
@@ -257,9 +236,9 @@ export function SmartFilterBar({
                 </div>
 
                 {/* Quick Selection Buttons */}
-                <div className="space-y-3">
-                  <div className="text-sm font-medium text-muted-foreground text-center">Selección rápida:</div>
-                  <div className="flex flex-wrap gap-2 justify-center">
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground text-center">Selección rápida</div>
+                  <div className="flex gap-2 justify-center">
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -268,7 +247,7 @@ export function SmartFilterBar({
                         onFilterChange('desde', today)
                         onFilterChange('hasta', today)
                       }}
-                      className="text-xs hover:bg-accent-blue/10 hover:border-accent-blue/50"
+                      className="text-xs px-3 py-1 h-7 hover:bg-accent-blue/10 hover:border-accent-blue/50"
                     >
                       Hoy
                     </Button>
@@ -281,9 +260,9 @@ export function SmartFilterBar({
                         onFilterChange('desde', weekAgo)
                         onFilterChange('hasta', today)
                       }}
-                      className="text-xs hover:bg-accent-blue/10 hover:border-accent-blue/50"
+                      className="text-xs px-3 py-1 h-7 hover:bg-accent-blue/10 hover:border-accent-blue/50"
                     >
-                      Última semana
+                      Semana
                     </Button>
                     <Button 
                       size="sm" 
@@ -295,15 +274,15 @@ export function SmartFilterBar({
                         onFilterChange('desde', monthAgo)
                         onFilterChange('hasta', today)
                       }}
-                      className="text-xs hover:bg-accent-blue/10 hover:border-accent-blue/50"
+                      className="text-xs px-3 py-1 h-7 hover:bg-accent-blue/10 hover:border-accent-blue/50"
                     >
-                      Último mes
+                      Mes
                     </Button>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-2 border-t">
+                <div className="flex gap-2 pt-2 border-t">
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -312,18 +291,17 @@ export function SmartFilterBar({
                       onClearFilter('hasta')
                       setDatePickerOpen(null)
                     }}
-                    className="flex-1 hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive"
+                    className="flex-1 h-8 text-xs hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive"
                   >
-                    <X className="w-4 h-4 mr-2" />
+                    <X className="w-3 h-3 mr-1" />
                     Limpiar
                   </Button>
                   <Button 
                     size="sm" 
                     onClick={() => setDatePickerOpen(null)}
-                    className="flex-1 bg-accent-blue hover:bg-accent-blue/90 text-white"
+                    className="flex-1 h-8 text-xs bg-accent-blue hover:bg-accent-blue/90 text-white"
                   >
-                    <CalendarDays className="w-4 h-4 mr-2" />
-                    Aplicar Filtro
+                    Aplicar
                   </Button>
                 </div>
               </div>

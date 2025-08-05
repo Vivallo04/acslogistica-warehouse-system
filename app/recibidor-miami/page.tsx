@@ -14,7 +14,7 @@ import { SmartFilterBar } from "@/components/recibidor-miami/SmartFilterBar"
 import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
 import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { format } from "date-fns"
-import { type PackageSearchResult, type SearchResult, useFastSearch } from "@/hooks/useFastSearch"
+import { type PackageSearchResult, type SearchResult, useFastSearch, detectSearchType } from "@/hooks/useFastSearch"
 import * as Sentry from "@sentry/nextjs"
 
 // Constants
@@ -212,6 +212,27 @@ function RecibidorMiamiContent() {
             hasError: false
           })
         }
+
+        // Update Advanced Tracking search state if it was a tracking search
+        if (filters.buscarPorTracking && filters.buscarPorTracking.length >= 3) {
+          const searchType = detectSearchType(filters.buscarPorTracking)
+          console.log('Advanced tracking search results:', {
+            searchTerm: filters.buscarPorTracking,
+            searchType: searchType,
+            totalCount: data.totalCount,
+            sampleResults: data.data.slice(0, 3).map(p => ({ 
+              nid: p.nid, 
+              tracking: p.tracking,
+              creadoPor: p.creadoPor
+            }))
+          })
+          setAdvancedTrackingSearchState({
+            isSearching: false,
+            resultCount: data.totalCount,
+            hasError: false,
+            searchType: searchType
+          })
+        }
         
         // Show success toast only on filter changes (not on initial load or page changes)
         const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
@@ -264,6 +285,14 @@ function RecibidorMiamiContent() {
       // Update Client search state on error
       if (filters.buscarPorCliente && filters.buscarPorCliente.length >= 2) {
         setClientSearchState({
+          isSearching: false,
+          hasError: true
+        })
+      }
+
+      // Update Advanced Tracking search state on error
+      if (filters.buscarPorTracking && filters.buscarPorTracking.length >= 3) {
+        setAdvancedTrackingSearchState({
           isSearching: false,
           hasError: true
         })
@@ -383,6 +412,12 @@ function RecibidorMiamiContent() {
       handleFilterChange(key as keyof PackageFilters, undefined)
     } else if (key === 'estado' || key === 'pais' || key === 'numeroTarima') {
       handleFilterChange(key as keyof PackageFilters, 'all')
+      
+      // Special case: If clearing tarima and current page size is 1000, reset it to default
+      // This prevents 400 error since 1000 items per page is only allowed when a tarima is selected
+      if (key === 'numeroTarima' && filters.elementosPorPagina === 1000) {
+        handleFilterChange('elementosPorPagina', DEFAULT_PAGE_SIZE)
+      }
     } else if (key === 'elementosPorPagina') {
       handleFilterChange(key as keyof PackageFilters, DEFAULT_PAGE_SIZE)
     } else {
@@ -474,6 +509,7 @@ function RecibidorMiamiContent() {
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   const [ciPaqueteTimeout, setCiPaqueteTimeout] = useState<NodeJS.Timeout | null>(null)
   const [clientTimeout, setClientTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [advancedTrackingTimeout, setAdvancedTrackingTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // AbortController refs for canceling previous requests
   const fetchAbortControllerRef = useRef<AbortController | null>(null)
@@ -494,6 +530,16 @@ function RecibidorMiamiContent() {
     isSearching: boolean
     resultCount?: number
     hasError?: boolean
+  }>({
+    isSearching: false
+  })
+
+  // Advanced tracking search state
+  const [advancedTrackingSearchState, setAdvancedTrackingSearchState] = useState<{
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+    searchType?: 'tracking' | 'client' | 'mixed'
   }>({
     isSearching: false
   })
@@ -554,6 +600,39 @@ function RecibidorMiamiContent() {
     setClientTimeout(timeout)
   }, [handleFilterChange, clientTimeout])
 
+  // Advanced tracking search handler with smart detection (same as SearchHero)
+  const handleAdvancedTrackingChange = useCallback((value: string) => {
+    // Update the input value immediately (synchronously)
+    handleFilterChange('buscarPorTracking', value)
+    
+    // Clear previous timeout
+    if (advancedTrackingTimeout) {
+      clearTimeout(advancedTrackingTimeout)
+    }
+    
+    // Reset search state if less than 3 characters
+    if (value.length < 3) {
+      setAdvancedTrackingSearchState({ isSearching: false })
+      return
+    }
+    
+    // Detect search type using the same logic as SearchHero
+    const searchType = detectSearchType(value)
+    
+    // Set searching state
+    setAdvancedTrackingSearchState({ 
+      isSearching: true, 
+      searchType 
+    })
+    
+    // Debounced search after 300ms (same as SearchHero for consistency)
+    const timeout = setTimeout(() => {
+      console.log(`Advanced tracking search triggered for: ${value} (type: ${searchType})`)
+    }, 300)
+    
+    setAdvancedTrackingTimeout(timeout)
+  }, [handleFilterChange, advancedTrackingTimeout])
+
   // Cleanup timeouts and abort controllers on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
@@ -566,6 +645,9 @@ function RecibidorMiamiContent() {
       if (clientTimeout) {
         clearTimeout(clientTimeout)
       }
+      if (advancedTrackingTimeout) {
+        clearTimeout(advancedTrackingTimeout)
+      }
       // Cancel any ongoing requests
       if (fetchAbortControllerRef.current) {
         fetchAbortControllerRef.current.abort()
@@ -577,7 +659,7 @@ function RecibidorMiamiContent() {
         ciPaqueteSearchAbortControllerRef.current.abort()
       }
     }
-  }, [searchTimeout, ciPaqueteTimeout, clientTimeout])
+  }, [searchTimeout, ciPaqueteTimeout, clientTimeout, advancedTrackingTimeout])
   
   const handleQuickFilter = (filterType: string, value: string) => {
     console.log(`Applying quick filter: ${filterType} = ${value}`)
@@ -723,11 +805,14 @@ function RecibidorMiamiContent() {
         }}
         onCiPaqueteChange={handleCiPaqueteChange}
         onClientChange={handleClientChange}
+        onAdvancedTrackingChange={handleAdvancedTrackingChange}
         onClearFilter={(key) => {
           if (key === 'ciPaquete') {
             setCiPaqueteSearchState({ isSearching: false })
           } else if (key === 'buscarPorCliente') {
             setClientSearchState({ isSearching: false })
+          } else if (key === 'buscarPorTracking') {
+            setAdvancedTrackingSearchState({ isSearching: false })
           }
           clearFilter(key)
         }}
@@ -736,6 +821,7 @@ function RecibidorMiamiContent() {
         activeFiltersCount={getActiveAdvancedFiltersCount()}
         ciPaqueteSearchState={ciPaqueteSearchState}
         clientSearchState={clientSearchState}
+        advancedTrackingSearchState={advancedTrackingSearchState}
       />
 
 

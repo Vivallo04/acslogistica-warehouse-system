@@ -97,22 +97,25 @@ export function BatchModePanel({
       "transition-all duration-300",
       session?.isActive ? "border-accent-blue/50 bg-accent-blue/5" : "border-border"
     )}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Package2 className={cn(
               "w-5 h-5",
               session?.status === 'active' && "text-green-600 animate-pulse",
               session?.status === 'paused' && "text-orange-500"
             )} />
-            {session?.isActive ? "Modo Lote Activo" : "Configurar Modo Lote"}
+            <span className="leading-tight">
+              {session?.isActive ? "Modo Lote Activo" : "Configurar Modo Lote"}
+            </span>
           </CardTitle>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2">
             {session?.isActive && (
               <Badge 
                 variant={session.status === 'active' ? 'default' : 'secondary'}
                 className={cn(
+                  "text-xs",
                   session.status === 'active' && "bg-green-600",
                   session.status === 'paused' && "bg-orange-500"
                 )}
@@ -134,55 +137,55 @@ export function BatchModePanel({
       </CardHeader>
 
       {isVisible && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 sm:px-6">
           {/* Session Info */}
           {session?.isActive && (
-            <div className="grid grid-cols-3 gap-4 p-3 bg-muted/50 rounded-lg">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-blue">{session.packagesScanned}</div>
-                <div className="text-xs text-muted-foreground">Paquetes</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 p-3 bg-muted/50 rounded-lg">
+              <div className="text-center sm:text-center">
+                <div className="text-xl sm:text-2xl font-bold text-accent-blue">{session.packagesScanned}</div>
+                <div className="text-xs text-muted-foreground">Paquetes procesados</div>
               </div>
-              <div className="text-center">
+              <div className="text-center sm:text-center">
                 <div className="text-sm font-medium flex items-center justify-center gap-1">
                   <Timer className="w-4 h-4" />
                   {formatDuration(session.startedAt)}
                 </div>
-                <div className="text-xs text-muted-foreground">Duración</div>
+                <div className="text-xs text-muted-foreground">Duración total</div>
               </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground">ID Sesión</div>
+              <div className="text-center sm:text-center">
+                <div className="text-xs text-muted-foreground">ID de Sesión</div>
                 <div className="text-sm font-mono">{session.id.split('_')[1]}</div>
               </div>
             </div>
           )}
 
           {/* Session Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {!session?.isActive ? (
               <Button
                 onClick={handleStartSession}
-                className="bg-accent-blue hover:bg-accent-blue/90 text-white flex-1"
+                className="bg-accent-blue hover:bg-accent-blue/90 text-white h-12 sm:h-10 sm:flex-1"
               >
                 <Play className="w-4 h-4 mr-2" />
-                Iniciar Sesión de Lote
+                <span className="text-base sm:text-sm">Iniciar Sesión de Lote</span>
               </Button>
             ) : (
               <>
                 {session.status === 'active' ? (
-                  <Button onClick={onPauseSession} variant="outline" className="flex-1">
+                  <Button onClick={onPauseSession} variant="outline" className="h-12 sm:h-10 sm:flex-1">
                     <Pause className="w-4 h-4 mr-2" />
-                    Pausar
+                    <span className="text-base sm:text-sm">Pausar Sesión</span>
                   </Button>
                 ) : (
-                  <Button onClick={onResumeSession} className="bg-green-600 hover:bg-green-700 text-white flex-1">
+                  <Button onClick={onResumeSession} className="bg-green-600 hover:bg-green-700 text-white h-12 sm:h-10 sm:flex-1">
                     <Play className="w-4 h-4 mr-2" />
-                    Reanudar
+                    <span className="text-base sm:text-sm">Reanudar Sesión</span>
                   </Button>
                 )}
                 
-                <Button onClick={onCompleteSession} variant="destructive">
+                <Button onClick={onCompleteSession} variant="destructive" className="h-12 sm:h-10">
                   <Square className="w-4 h-4 mr-2" />
-                  Completar
+                  <span className="text-base sm:text-sm">Completar</span>
                 </Button>
               </>
             )}
@@ -209,14 +212,14 @@ export function BatchModePanel({
                   <div className="space-y-2">
                     <Label htmlFor="batch-contenido" className="text-sm flex items-center gap-2">
                       <Target className="w-3 h-3" />
-                      Contenido Predeterminado
+                      <span>Contenido Predeterminado</span>
                     </Label>
                     <Textarea
                       id="batch-contenido"
                       value={tempDefaults.contenido}
                       onChange={(e) => setTempDefaults(prev => ({ ...prev, contenido: e.target.value }))}
                       placeholder="Ej: Documentos personales"
-                      className="min-h-[60px] text-sm"
+                      className="min-h-[80px] sm:min-h-[60px] text-base sm:text-sm resize-none"
                     />
                   </div>
 
@@ -224,20 +227,21 @@ export function BatchModePanel({
                   <div className="space-y-2">
                     <Label htmlFor="batch-peso" className="text-sm flex items-center gap-2">
                       <Target className="w-3 h-3" />
-                      Peso Predeterminado
+                      <span>Peso Predeterminado</span>
                     </Label>
                     <div className="flex items-center gap-2">
                       <Input
                         id="batch-peso"
                         type="number"
+                        inputMode="decimal"
                         step="0.1"
                         min="0"
                         value={tempDefaults.peso}
                         onChange={(e) => setTempDefaults(prev => ({ ...prev, peso: e.target.value }))}
                         placeholder="2.5"
-                        className="text-sm"
+                        className="text-base sm:text-sm h-12 sm:h-10"
                       />
-                      <span className="text-sm text-muted-foreground">kg</span>
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">kg</span>
                     </div>
                   </div>
 
@@ -245,18 +249,18 @@ export function BatchModePanel({
                   <div className="space-y-2">
                     <Label htmlFor="batch-tarima" className="text-sm flex items-center gap-2">
                       <Target className="w-3 h-3" />
-                      Tarima Predeterminada
+                      <span>Tarima Predeterminada</span>
                     </Label>
                     <Select
                       value={tempDefaults.numeroTarima}
                       onValueChange={(value) => setTempDefaults(prev => ({ ...prev, numeroTarima: value }))}
                     >
-                      <SelectTrigger className="text-sm">
+                      <SelectTrigger className="text-base sm:text-sm h-12 sm:h-10">
                         <SelectValue placeholder="- Seleccione una tarima -" />
                       </SelectTrigger>
                       <SelectContent>
                         {palletOptions.map(option => (
-                          <SelectItem key={option.value} value={option.value} className="text-sm">
+                          <SelectItem key={option.value} value={option.value} className="text-sm py-3 sm:py-2">
                             {option.label}
                           </SelectItem>
                         ))}
@@ -269,11 +273,13 @@ export function BatchModePanel({
                     onClick={session?.isActive ? handleUpdateDefaults : () => {}}
                     variant="outline"
                     size="sm"
-                    className="w-full text-sm"
+                    className="w-full text-base sm:text-sm h-12 sm:h-10"
                     disabled={!session?.isActive}
                   >
-                    <Settings2 className="w-3 h-3 mr-2" />
-                    {session?.isActive ? "Actualizar Valores" : "Se aplicarán al iniciar"}
+                    <Settings2 className="w-4 h-4 sm:w-3 sm:h-3 mr-2" />
+                    <span>
+                      {session?.isActive ? "Actualizar Valores" : "Se aplicarán al iniciar"}
+                    </span>
                   </Button>
                 </div>
               )}

@@ -999,57 +999,144 @@ function RecibidorMiamiContent() {
 
           {/* Fast Search Pagination */}
           {fastSearchResults && fastSearchMeta && (fastSearchMeta.hasNextPage || fastSearchMeta.hasPreviousPage) && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                <span>Página {fastSearchMeta.currentPage} de {Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)} • Búsqueda rápida</span>
+            <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground flex items-center gap-2 justify-center sm:justify-start">
+                <span className="text-center sm:text-left">Página {fastSearchMeta.currentPage} de {Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)} • Búsqueda rápida</span>
                 {isPaginationLoading && (
                   <div className="animate-spin h-4 w-4 border-2 border-accent-blue border-t-transparent rounded-full"></div>
                 )}
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleFastSearchPageChange(fastSearchMeta.currentPage - 1)}
                   disabled={!fastSearchMeta.hasPreviousPage || isPaginationLoading}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Anterior
+                  <span className="sm:hidden">Ant</span>
+                  <span className="hidden sm:inline">Anterior</span>
                 </Button>
                 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto px-2 sm:px-0">
                   {(() => {
                     const totalPages = Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)
                     const currentPage = fastSearchMeta.currentPage
-                    const maxButtons = 5
                     
-                    // Calculate start and end page numbers to show
-                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2))
-                    let endPage = Math.min(totalPages, startPage + maxButtons - 1)
+                    // Responsive maxButtons: 3 on mobile, 4 on medium, 5 on large screens
+                    const maxButtonsMobile = 3
+                    const maxButtonsMedium = 4
+                    const maxButtonsDesktop = 5
                     
-                    // Adjust start if we're near the end
-                    if (endPage - startPage + 1 < maxButtons) {
-                      startPage = Math.max(1, endPage - maxButtons + 1)
+                    // Calculate for mobile (simple range)
+                    let startPageMobile = Math.max(1, currentPage - Math.floor(maxButtonsMobile / 2))
+                    let endPageMobile = Math.min(totalPages, startPageMobile + maxButtonsMobile - 1)
+                    if (endPageMobile - startPageMobile + 1 < maxButtonsMobile) {
+                      startPageMobile = Math.max(1, endPageMobile - maxButtonsMobile + 1)
+                    }
+                    
+                    // Calculate for medium screens
+                    let startPageMedium = Math.max(1, currentPage - Math.floor(maxButtonsMedium / 2))
+                    let endPageMedium = Math.min(totalPages, startPageMedium + maxButtonsMedium - 1)
+                    if (endPageMedium - startPageMedium + 1 < maxButtonsMedium) {
+                      startPageMedium = Math.max(1, endPageMedium - maxButtonsMedium + 1)
+                    }
+                    
+                    // Calculate for desktop (with ellipsis logic)
+                    let startPageDesktop = Math.max(1, currentPage - Math.floor(maxButtonsDesktop / 2))
+                    let endPageDesktop = Math.min(totalPages, startPageDesktop + maxButtonsDesktop - 1)
+                    if (endPageDesktop - startPageDesktop + 1 < maxButtonsDesktop) {
+                      startPageDesktop = Math.max(1, endPageDesktop - maxButtonsDesktop + 1)
                     }
                     
                     const pages = []
-                    for (let i = startPage; i <= endPage; i++) {
-                      pages.push(i)
+                    
+                    // Add first page if not in desktop range (desktop only)
+                    if (startPageDesktop > 1) {
+                      pages.push(
+                        <Button
+                          key={1}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFastSearchPageChange(1)}
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
+                        >
+                          1
+                        </Button>
+                      )
+                      if (startPageDesktop > 2) {
+                        pages.push(
+                          <span key="ellipsis1" className="px-2 text-muted-foreground hidden lg:inline">
+                            ...
+                          </span>
+                        )
+                      }
                     }
                     
-                    return pages.map(pageNum => (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleFastSearchPageChange(pageNum)}
-                        disabled={isPaginationLoading}
-                        className="min-w-8 h-8 rounded-full px-3"
-                      >
-                        {pageNum}
-                      </Button>
-                    ))
+                    // Add page range - show different ranges for mobile/medium/desktop
+                    for (let i = 1; i <= totalPages; i++) {
+                      const isInMobileRange = i >= startPageMobile && i <= endPageMobile
+                      const isInMediumRange = i >= startPageMedium && i <= endPageMedium
+                      const isInDesktopRange = i >= startPageDesktop && i <= endPageDesktop
+                      
+                      if (isInMobileRange || isInMediumRange || isInDesktopRange) {
+                        // Determine visibility classes
+                        let visibilityClass = ''
+                        if (isInMobileRange && !isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex sm:hidden'
+                        } else if (isInMediumRange && !isInMobileRange && !isInDesktopRange) {
+                          visibilityClass = 'hidden sm:flex lg:hidden'
+                        } else if (isInDesktopRange && !isInMobileRange && !isInMediumRange) {
+                          visibilityClass = 'hidden lg:flex'
+                        } else if (isInMobileRange && isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex lg:hidden'
+                        } else if (isInMobileRange && isInDesktopRange && !isInMediumRange) {
+                          visibilityClass = 'flex sm:hidden lg:flex'
+                        } else if (isInMediumRange && isInDesktopRange && !isInMobileRange) {
+                          visibilityClass = 'hidden sm:flex'
+                        } else if (isInMobileRange && isInMediumRange && isInDesktopRange) {
+                          visibilityClass = 'flex'
+                        }
+                        
+                        pages.push(
+                          <Button
+                            key={i}
+                            variant={currentPage === i ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleFastSearchPageChange(i)}
+                            disabled={isPaginationLoading}
+                            className={`min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 ${visibilityClass}`}
+                          >
+                            {i}
+                          </Button>
+                        )
+                      }
+                    }
+                    
+                    // Add last page if not in desktop range (desktop only)
+                    if (endPageDesktop < totalPages) {
+                      if (endPageDesktop < totalPages - 1) {
+                        pages.push(
+                          <span key="ellipsis2" className="px-2 text-muted-foreground hidden lg:inline">
+                            ...
+                          </span>
+                        )
+                      }
+                      pages.push(
+                        <Button
+                          key={totalPages}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFastSearchPageChange(totalPages)}
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
+                        >
+                          {totalPages}
+                        </Button>
+                      )
+                    }
+                    
+                    return pages
                   })()}
                 </div>
                 
@@ -1058,9 +1145,10 @@ function RecibidorMiamiContent() {
                   size="sm"
                   onClick={() => handleFastSearchPageChange(fastSearchMeta.currentPage + 1)}
                   disabled={!fastSearchMeta.hasNextPage || isPaginationLoading}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Siguiente
+                  <span className="sm:hidden">Sig</span>
+                  <span className="hidden sm:inline">Siguiente</span>
                 </Button>
               </div>
             </div>
@@ -1068,80 +1156,121 @@ function RecibidorMiamiContent() {
 
           {/* Regular Pagination - Hide when showing fast search results */}
           {!fastSearchResults && totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground text-center sm:text-left">
                 Mostrando {startItem} a {endItem} de {totalCount} resultados
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(filters.pagina - 1)}
                   disabled={filters.pagina === 1}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Anterior
+                  <span className="sm:hidden">Ant</span>
+                  <span className="hidden sm:inline">Anterior</span>
                 </Button>
                 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto px-2 sm:px-0">
                   {(() => {
                     const currentPage = filters.pagina
-                    const maxButtons = 7 // Show up to 7 page buttons
                     
-                    // Calculate start and end page numbers to show
-                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2))
-                    let endPage = Math.min(totalPages, startPage + maxButtons - 1)
+                    // Responsive maxButtons: 3 on mobile, 5 on medium, 7 on desktop
+                    const maxButtonsMobile = 3
+                    const maxButtonsMedium = 5
+                    const maxButtonsDesktop = 7
                     
-                    // Adjust start if we're near the end
-                    if (endPage - startPage + 1 < maxButtons) {
-                      startPage = Math.max(1, endPage - maxButtons + 1)
+                    // Calculate for mobile (simple range)
+                    let startPageMobile = Math.max(1, currentPage - Math.floor(maxButtonsMobile / 2))
+                    let endPageMobile = Math.min(totalPages, startPageMobile + maxButtonsMobile - 1)
+                    if (endPageMobile - startPageMobile + 1 < maxButtonsMobile) {
+                      startPageMobile = Math.max(1, endPageMobile - maxButtonsMobile + 1)
+                    }
+                    
+                    // Calculate for medium screens
+                    let startPageMedium = Math.max(1, currentPage - Math.floor(maxButtonsMedium / 2))
+                    let endPageMedium = Math.min(totalPages, startPageMedium + maxButtonsMedium - 1)
+                    if (endPageMedium - startPageMedium + 1 < maxButtonsMedium) {
+                      startPageMedium = Math.max(1, endPageMedium - maxButtonsMedium + 1)
+                    }
+                    
+                    // Calculate for desktop (with ellipsis logic)
+                    let startPageDesktop = Math.max(1, currentPage - Math.floor(maxButtonsDesktop / 2))
+                    let endPageDesktop = Math.min(totalPages, startPageDesktop + maxButtonsDesktop - 1)
+                    if (endPageDesktop - startPageDesktop + 1 < maxButtonsDesktop) {
+                      startPageDesktop = Math.max(1, endPageDesktop - maxButtonsDesktop + 1)
                     }
                     
                     const pages = []
                     
-                    // Add first page if not in range
-                    if (startPage > 1) {
+                    // Add first page if not in desktop range (desktop only)
+                    if (startPageDesktop > 1) {
                       pages.push(
                         <Button
                           key={1}
                           variant="outline"
                           size="sm"
                           onClick={() => handlePageChange(1)}
-                          className="min-w-8 h-8 rounded-full px-3"
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
                         >
                           1
                         </Button>
                       )
-                      if (startPage > 2) {
+                      if (startPageDesktop > 2) {
                         pages.push(
-                          <span key="ellipsis1" className="px-2 text-muted-foreground">
+                          <span key="ellipsis1" className="px-2 text-muted-foreground hidden lg:inline">
                             ...
                           </span>
                         )
                       }
                     }
                     
-                    // Add page range
-                    for (let i = startPage; i <= endPage; i++) {
-                      pages.push(
-                        <Button
-                          key={i}
-                          variant={currentPage === i ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(i)}
-                          className="min-w-8 h-8 rounded-full px-3"
-                        >
-                          {i}
-                        </Button>
-                      )
+                    // Add page range - show different ranges for mobile/medium/desktop
+                    for (let i = 1; i <= totalPages; i++) {
+                      const isInMobileRange = i >= startPageMobile && i <= endPageMobile
+                      const isInMediumRange = i >= startPageMedium && i <= endPageMedium
+                      const isInDesktopRange = i >= startPageDesktop && i <= endPageDesktop
+                      
+                      if (isInMobileRange || isInMediumRange || isInDesktopRange) {
+                        // Determine visibility classes
+                        let visibilityClass = ''
+                        if (isInMobileRange && !isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex sm:hidden'
+                        } else if (isInMediumRange && !isInMobileRange && !isInDesktopRange) {
+                          visibilityClass = 'hidden sm:flex lg:hidden'
+                        } else if (isInDesktopRange && !isInMobileRange && !isInMediumRange) {
+                          visibilityClass = 'hidden lg:flex'
+                        } else if (isInMobileRange && isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex lg:hidden'
+                        } else if (isInMobileRange && isInDesktopRange && !isInMediumRange) {
+                          visibilityClass = 'flex sm:hidden lg:flex'
+                        } else if (isInMediumRange && isInDesktopRange && !isInMobileRange) {
+                          visibilityClass = 'hidden sm:flex'
+                        } else if (isInMobileRange && isInMediumRange && isInDesktopRange) {
+                          visibilityClass = 'flex'
+                        }
+                        
+                        pages.push(
+                          <Button
+                            key={i}
+                            variant={currentPage === i ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(i)}
+                            className={`min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 ${visibilityClass}`}
+                          >
+                            {i}
+                          </Button>
+                        )
+                      }
                     }
                     
-                    // Add last page if not in range
-                    if (endPage < totalPages) {
-                      if (endPage < totalPages - 1) {
+                    // Add last page if not in desktop range (desktop only)
+                    if (endPageDesktop < totalPages) {
+                      if (endPageDesktop < totalPages - 1) {
                         pages.push(
-                          <span key="ellipsis2" className="px-2 text-muted-foreground">
+                          <span key="ellipsis2" className="px-2 text-muted-foreground hidden lg:inline">
                             ...
                           </span>
                         )
@@ -1152,7 +1281,7 @@ function RecibidorMiamiContent() {
                           variant="outline"
                           size="sm"
                           onClick={() => handlePageChange(totalPages)}
-                          className="min-w-8 h-8 rounded-full px-3"
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
                         >
                           {totalPages}
                         </Button>
@@ -1168,9 +1297,10 @@ function RecibidorMiamiContent() {
                   size="sm"
                   onClick={() => handlePageChange(filters.pagina + 1)}
                   disabled={filters.pagina === totalPages}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Siguiente
+                  <span className="sm:hidden">Sig</span>
+                  <span className="hidden sm:inline">Siguiente</span>
                 </Button>
               </div>
             </div>

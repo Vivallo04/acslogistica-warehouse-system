@@ -474,14 +474,14 @@ function PreRegistroContent() {
   }, [formData, handleScanToggle, handleBatchMode, handlePrintLabels, handleReports, handleSettings, toast])
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-accent-blue flex items-center gap-3">
-          <Package className="w-8 h-8" />
-          Pre Registro de Paquetes
+        <h1 className="text-2xl sm:text-3xl font-bold text-accent-blue flex items-center gap-2 sm:gap-3">
+          <Package className="w-6 h-6 sm:w-8 sm:h-8" />
+          <span className="leading-tight">Pre Registro de Paquetes</span>
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm sm:text-base text-muted-foreground">
           Registra la información básica de los paquetes antes de su procesamiento completo
         </p>
       </div>
@@ -497,21 +497,21 @@ function PreRegistroContent() {
         onAutoSyncToggle={handleAutoSyncToggle}
       />
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[60vh]">
-        {/* Left Column: Package Information Form */}
+      {/* Responsive Layout - Mobile First */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 min-h-[60vh]">
+        {/* Package Information Form */}
         <Card className={cn(
           "flex flex-col h-fit transition-all duration-200",
           batchSession?.isActive && batchSession.status === 'active' && "border-accent-blue/50 bg-accent-blue/5"
         )}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Información del Paquete</span>
+          <CardHeader className="pb-4 sm:pb-6">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-lg sm:text-xl">Información del Paquete</span>
               {batchSession?.isActive && (
                 <Badge 
                   variant={batchSession.status === 'active' ? 'default' : 'secondary'}
                   className={cn(
-                    "text-xs",
+                    "text-xs self-start sm:self-auto",
                     batchSession.status === 'active' && "bg-green-600 animate-pulse"
                   )}
                 >
@@ -520,14 +520,16 @@ function PreRegistroContent() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1">
-          <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+          <CardContent className="flex-1 px-4 sm:px-6">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Peso */}
             <div className="space-y-2">
-              <Label htmlFor="peso" className="text-sm font-medium flex items-center gap-2">
-                Peso <span className="text-red-500">*</span>
+              <Label htmlFor="peso" className="text-sm font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <span className="flex items-center gap-2">
+                  Peso <span className="text-red-500">*</span>
+                </span>
                 {batchSession?.isActive && batchSession.defaultValues.peso && (
-                  <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
+                  <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30 self-start sm:self-auto">
                     Auto-llenado
                   </Badge>
                 )}
@@ -536,6 +538,7 @@ function PreRegistroContent() {
                 <Input
                   id="peso"
                   type="number"
+                  inputMode="decimal"
                   step="0.1"
                   min="0"
                   value={formData.peso}
@@ -547,11 +550,11 @@ function PreRegistroContent() {
                   }
                   required
                   className={cn(
-                    "w-full transition-all duration-200",
+                    "w-full transition-all duration-200 h-12 text-base sm:h-10 sm:text-sm",
                     batchSession?.isActive && batchSession.defaultValues.peso && "bg-accent-blue/5 border-accent-blue/30"
                   )}
                 />
-                <span className="text-sm text-muted-foreground">kg</span>
+                <span className="text-sm text-muted-foreground whitespace-nowrap">kg</span>
               </div>
             </div>
 
@@ -567,20 +570,23 @@ function PreRegistroContent() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={casilleroOpen}
-                    className="w-full justify-between"
+                    className="w-full justify-between h-12 text-base sm:h-10 sm:text-sm text-left"
                   >
-                    {formData.numeroCasillero
-                      ? casilleroOptions.find((option) => option.value === formData.numeroCasillero)?.label
-                      : "Selecciona un casillero o cliente"}
+                    <span className="truncate">
+                      {formData.numeroCasillero
+                        ? casilleroOptions.find((option) => option.value === formData.numeroCasillero)?.label
+                        : "Selecciona un casillero o cliente"}
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[200px] p-0">
+                <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[250px] sm:max-h-[200px] p-0">
                   <Command>
                     <CommandInput 
                       placeholder="Buscar casillero o cliente..." 
                       value={casilleroSearch}
                       onValueChange={setCasilleroSearch}
+                      className="h-12 sm:h-10"
                     />
                     <CommandList>
                       <CommandEmpty>No se encontraron resultados.</CommandEmpty>
@@ -594,6 +600,7 @@ function PreRegistroContent() {
                               setCasilleroOpen(false)
                               setCasilleroSearch("")
                             }}
+                            className="py-3 sm:py-2"
                           >
                             <Check
                               className={cn(
@@ -601,7 +608,7 @@ function PreRegistroContent() {
                                 formData.numeroCasillero === option.value ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            {option.label}
+                            <span className="truncate">{option.label}</span>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -613,19 +620,21 @@ function PreRegistroContent() {
 
             {/* Contenido */}
             <div className="space-y-2">
-              <Label htmlFor="contenido" className="text-sm font-medium flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  Contenido
-                  {batchSession?.isActive && batchSession.defaultValues.contenido && (
-                    <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
-                      Auto-llenado
-                    </Badge>
-                  )}
+              <Label htmlFor="contenido" className="text-sm font-medium">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span>Contenido</span>
+                    {batchSession?.isActive && batchSession.defaultValues.contenido && (
+                      <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30 self-start sm:self-auto">
+                        Auto-llenado
+                      </Badge>
+                    )}
+                  </div>
+                  <AIContentScanner 
+                    onContentGenerated={handleContentGenerated}
+                    disabled={!formData.numeroTracking}
+                  />
                 </div>
-                <AIContentScanner 
-                  onContentGenerated={handleContentGenerated}
-                  disabled={!formData.numeroTracking}
-                />
               </Label>
               <Textarea
                 id="contenido"
@@ -637,7 +646,7 @@ function PreRegistroContent() {
                     : "Describe el contenido del paquete o usa el escáner IA"
                 }
                 className={cn(
-                  "w-full min-h-[100px] transition-all duration-200",
+                  "w-full min-h-[120px] sm:min-h-[100px] transition-all duration-200 text-base sm:text-sm resize-none",
                   batchSession?.isActive && batchSession.defaultValues.contenido && "bg-accent-blue/5 border-accent-blue/30"
                 )}
               />
@@ -645,14 +654,18 @@ function PreRegistroContent() {
 
             {/* Número de Tracking - Required */}
             <div className="space-y-2">
-              <Label htmlFor="numeroTracking" className="text-sm font-medium flex items-center gap-2">
-                Número de Tracking <span className="text-red-500">*</span>
-                {scannerMode && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    Modo Escáner
+              <Label htmlFor="numeroTracking" className="text-sm font-medium">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="flex items-center gap-2">
+                    Número de Tracking <span className="text-red-500">*</span>
                   </span>
-                )}
+                  {scannerMode && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse self-start sm:self-auto">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      Modo Escáner
+                    </span>
+                  )}
+                </div>
               </Label>
               <Input
                 id="numeroTracking"
@@ -666,7 +679,7 @@ function PreRegistroContent() {
                 autoComplete="off"
                 spellCheck={false}
                 className={cn(
-                  "w-full font-mono transition-all duration-200",
+                  "w-full font-mono transition-all duration-200 h-12 text-base sm:h-10 sm:text-sm",
                   scannerMode && "ring-2 ring-green-500 border-green-500 bg-green-50"
                 )}
               />
@@ -674,13 +687,17 @@ function PreRegistroContent() {
 
             {/* Número de Tarima - Required */}
             <div className="space-y-2">
-              <Label htmlFor="numeroTarima" className="text-sm font-medium flex items-center gap-2">
-                Número de Tarima <span className="text-red-500">*</span>
-                {batchSession?.isActive && batchSession.defaultValues.numeroTarima && (
-                  <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
-                    Auto-llenado
-                  </Badge>
-                )}
+              <Label htmlFor="numeroTarima" className="text-sm font-medium">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="flex items-center gap-2">
+                    Número de Tarima <span className="text-red-500">*</span>
+                  </span>
+                  {batchSession?.isActive && batchSession.defaultValues.numeroTarima && (
+                    <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30 self-start sm:self-auto">
+                      Auto-llenado
+                    </Badge>
+                  )}
+                </div>
               </Label>
               <Select 
                 value={formData.numeroTarima} 
@@ -688,14 +705,14 @@ function PreRegistroContent() {
                 required
               >
                 <SelectTrigger className={cn(
-                  "w-full transition-all duration-200",
+                  "w-full transition-all duration-200 h-12 text-base sm:h-10 sm:text-sm",
                   batchSession?.isActive && batchSession.defaultValues.numeroTarima && "bg-accent-blue/5 border-accent-blue/30"
                 )}>
                   <SelectValue placeholder="- Seleccione una tarima -" />
                 </SelectTrigger>
                 <SelectContent>
                   {palletOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem key={option.value} value={option.value} className="py-3 sm:py-2">
                       {option.label}
                     </SelectItem>
                   ))}
@@ -704,11 +721,11 @@ function PreRegistroContent() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 pt-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 sm:pt-6">
               <Button 
                 type="submit" 
                 className={cn(
-                  "px-8 transition-all duration-200",
+                  "w-full sm:flex-1 h-12 sm:h-10 text-base sm:text-sm transition-all duration-200",
                   batchSession?.isActive && batchSession.status === 'active'
                     ? "bg-green-600 hover:bg-green-700 text-white"
                     : "bg-accent-blue hover:bg-accent-blue/90 text-white"
@@ -720,20 +737,26 @@ function PreRegistroContent() {
                   (batchSession?.isActive && batchSession.status === 'paused')
                 }
               >
-                {batchSession?.isActive && batchSession.status === 'active' 
-                  ? `Escanear Lote (${batchSession.packagesScanned + 1})`
-                  : 'Procesar'
-                }
-                <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-white/20 rounded">Ctrl+S</kbd>
+                <span className="flex items-center justify-center gap-2">
+                  <span className="truncate">
+                    {batchSession?.isActive && batchSession.status === 'active' 
+                      ? `Escanear Lote (${batchSession.packagesScanned + 1})`
+                      : 'Procesar'
+                    }
+                  </span>
+                  <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-white/20 rounded">Ctrl+S</kbd>
+                </span>
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={batchSession?.isActive ? resetFormForBatch : resetForm}
-                className="px-8"
+                className="w-full sm:w-auto h-12 sm:h-10 text-base sm:text-sm px-6 sm:px-8"
               >
-                {batchSession?.isActive ? 'Siguiente' : 'Limpiar'}
-                <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-muted rounded">Ctrl+R</kbd>
+                <span className="flex items-center justify-center gap-2">
+                  <span>{batchSession?.isActive ? 'Siguiente' : 'Limpiar'}</span>
+                  <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-muted rounded">Ctrl+R</kbd>
+                </span>
               </Button>
             </div>
           </form>
@@ -741,7 +764,7 @@ function PreRegistroContent() {
         </Card>
 
         {/* Right Column: CI Document Viewer and Batch Panel */}
-        <div className="h-fit space-y-6">
+        <div className="h-fit space-y-4 sm:space-y-6">
           <CIDocumentViewer
             ciNumber={formData.numeroTracking ? "1234567" : undefined}
             pdfUrl={formData.numeroTracking ? "/sample-ci-document.pdf" : undefined}

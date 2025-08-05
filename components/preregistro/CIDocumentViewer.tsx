@@ -76,94 +76,99 @@ export function CIDocumentViewer({
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Código de CI
+            <span className="text-base sm:text-lg">Código de CI</span>
           </CardTitle>
           {ciNumber && (
-            <Badge variant="outline" className="font-mono">
+            <Badge variant="outline" className="font-mono text-xs self-start sm:self-auto">
               CI: {ciNumber}
             </Badge>
           )}
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col space-y-4">
+      <CardContent className="flex-1 flex flex-col space-y-3 sm:space-y-4 px-4 sm:px-6">
         {/* Toolbar */}
-        <div className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-          {/* Left side - Tools */}
-          <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleZoomOut}
-              disabled={zoom <= 50}
-              className="h-8 w-8 p-0"
-              title="Zoom Out"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            
-            <div className="px-2 py-1 text-xs font-medium bg-background rounded border min-w-[60px] text-center">
-              {zoom}%
+        <div className="bg-muted/50 rounded-lg p-2">
+          {/* Mobile: 2 rows, Desktop: 1 row */}
+          <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+            {/* Zoom Controls */}
+            <div className="flex items-center justify-center sm:justify-start gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleZoomOut}
+                disabled={zoom <= 50}
+                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+                title="Zoom Out"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              
+              <div className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs font-medium bg-background rounded border min-w-[70px] sm:min-w-[60px] text-center">
+                {zoom}%
+              </div>
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleZoomIn}
+                disabled={zoom >= 200}
+                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+                title="Zoom In"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
             </div>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleZoomIn}
-              disabled={zoom >= 200}
-              className="h-8 w-8 p-0"
-              title="Zoom In"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            
-            <div className="w-px h-6 bg-border mx-1" />
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleDownload}
-              className="h-8 w-8 p-0"
-              title="Download"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleRefresh}
-              className="h-8 w-8 p-0"
-              title="Refresh"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleRotateLeft}
-              className="h-8 w-8 p-0"
-              title="Rotate Left"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleRotateRight}
-              className="h-8 w-8 p-0"
-              title="Rotate Right"
-            >
-              <RotateCw className="h-4 w-4" />
-            </Button>
-          </div>
 
+            {/* Action Controls */}
+            <div className="flex items-center justify-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleDownload}
+                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+                title="Download"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRefresh}
+                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+                title="Refresh"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              
+              <div className="w-px h-6 bg-border mx-1" />
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRotateLeft}
+                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+                title="Rotate Left"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRotateRight}
+                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+                title="Rotate Right"
+              >
+                <RotateCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* PDF Viewer Area */}
@@ -206,24 +211,24 @@ export function CIDocumentViewer({
         </div>
 
         {/* Status Footer */}
-        <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-muted-foreground pt-2 border-t">
+          <div className="flex items-center gap-2 order-1 sm:order-none">
             {pdfUrl ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>Documento cargado</span>
+                <span className="text-xs sm:text-sm">Documento cargado</span>
               </>
             ) : (
               <>
                 <AlertCircle className="w-4 h-4 text-orange-500" />
-                <span>Esperando documento</span>
+                <span className="text-xs sm:text-sm">Esperando documento</span>
               </>
             )}
           </div>
           
           {pdfUrl && (
-            <div className="text-xs">
-              Tamaño: {fileSize || 'Calculating...'}
+            <div className="text-xs order-first sm:order-none">
+              Tamaño: {fileSize || 'Calculando...'}
             </div>
           )}
         </div>

@@ -224,7 +224,7 @@ export function SearchHero({
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-muted-foreground">Acceso rápido:</h3>
         </div>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
           {quickActions.map((action) => {
             const IconComponent = action.icon
             return (
@@ -233,9 +233,9 @@ export function SearchHero({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleQuickAction(action)}
-                className={`${action.color} rounded-full px-3 sm:px-4 py-2 h-auto font-medium transition-all duration-200 hover:scale-105 hover:shadow-md text-xs sm:text-sm whitespace-nowrap`}
+                className={`${action.color} rounded-full px-3 sm:px-4 py-3 sm:py-2 h-12 sm:h-auto w-full sm:w-auto font-medium transition-all duration-200 hover:scale-105 hover:shadow-md text-base sm:text-sm justify-start sm:justify-center whitespace-nowrap`}
               >
-                <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                <IconComponent className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4 mr-3 sm:mr-1.5 lg:mr-2" />
                 <span className="block">{action.label}</span>
               </Button>
             )

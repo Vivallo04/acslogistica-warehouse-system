@@ -14,7 +14,9 @@ import {
   User, 
   FileText, 
   Settings,
-  X
+  X,
+  XCircle,
+  Loader2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -35,6 +37,12 @@ interface AdvancedFiltersProps {
   isOpen: boolean
   onToggle: () => void
   activeFiltersCount: number
+  ciPaqueteSearchState?: {
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+  }
+  onCiPaqueteChange?: (value: string) => void
 }
 
 interface AdvancedFilterChipProps {
@@ -75,7 +83,9 @@ export function AdvancedFilters({
   onClearFilter,
   isOpen,
   onToggle,
-  activeFiltersCount
+  activeFiltersCount,
+  ciPaqueteSearchState,
+  onCiPaqueteChange
 }: AdvancedFiltersProps) {
   const isTrackingActive = !!(filters.buscarPorTracking && filters.buscarPorTracking.trim() !== '')
   const isGuiaActive = false // Disabled filter
@@ -193,19 +203,87 @@ export function AdvancedFilters({
                 />
               </div>
 
-              {/* CI Paquete */}
+              {/* CI Paquete - Enhanced Search */}
               <div className="space-y-3">
                 <Label htmlFor="advanced-cl-paquete" className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 sm:gap-2">
                   <Hash className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span className="text-xs sm:text-sm">CI Paquete</span>
                 </Label>
-                <Input
-                  id="advanced-cl-paquete"
-                  placeholder="ID del paquete"
-                  value={filters.ciPaquete}
-                  onChange={(e) => onFilterChange('ciPaquete', e.target.value)}
-                  className="rounded-xl border-2 transition-all duration-200 focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/20"
-                />
+                <div className="relative">
+                  <Input
+                    id="advanced-cl-paquete"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Ej: 129541... (mín. 3 dígitos)"
+                    value={filters.ciPaquete}
+                    onChange={(e) => {
+                      // Only allow numbers
+                      const value = e.target.value.replace(/[^0-9]/g, '')
+                      if (onCiPaqueteChange) {
+                        onCiPaqueteChange(value)
+                      } else {
+                        onFilterChange('ciPaquete', value)
+                      }
+                    }}
+                    className={cn(
+                      "rounded-xl border-2 transition-all duration-200 pr-10",
+                      ciPaqueteSearchState?.isSearching 
+                        ? "border-blue-500 focus:border-blue-600" 
+                        : ciPaqueteSearchState?.resultCount !== undefined
+                        ? ciPaqueteSearchState.resultCount > 0
+                          ? "border-green-500 focus:border-green-600"
+                          : "border-orange-500 focus:border-orange-600"
+                        : "focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/20"
+                    )}
+                  />
+                  
+                  {/* Right side indicators */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    {ciPaqueteSearchState?.isSearching ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    ) : filters.ciPaquete && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onClearFilter('ciPaquete')}
+                        className="h-6 w-6 p-0 hover:bg-muted rounded-full"
+                      >
+                        <XCircle className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Search Status */}
+                {filters.ciPaquete && filters.ciPaquete.length >= 3 && (
+                  <div className="text-xs">
+                    {ciPaqueteSearchState?.isSearching ? (
+                      <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Buscando paquetes que empiecen con {filters.ciPaquete}...
+                      </span>
+                    ) : ciPaqueteSearchState?.resultCount !== undefined ? (
+                      <span className={cn(
+                        "flex items-center gap-1",
+                        ciPaqueteSearchState.resultCount > 0 
+                          ? "text-green-600 dark:text-green-400" 
+                          : "text-orange-600 dark:text-orange-400"
+                      )}>
+                        <Hash className="h-3 w-3" />
+                        {ciPaqueteSearchState.resultCount > 0 
+                          ? `Encontrados ${ciPaqueteSearchState.resultCount} paquetes`
+                          : "No se encontraron paquetes"
+                        }
+                      </span>
+                    ) : filters.ciPaquete.length >= 3 && (
+                      <span className="text-muted-foreground">
+                        Escribe al menos 3 dígitos para buscar
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Elements per page */}

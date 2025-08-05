@@ -136,7 +136,10 @@ function RecibidorMiamiContent() {
       if (filters.guiaAerea) params.append('GuiaAerea', filters.guiaAerea)
       if (filters.buscarPorTracking) params.append('BuscarPorTracking', filters.buscarPorTracking)
       if (filters.buscarPorCliente) params.append('BuscarPorCliente', filters.buscarPorCliente)
-      if (filters.ciPaquete) params.append('ClPaquete', filters.ciPaquete)
+      if (filters.ciPaquete) {
+        console.log('Sending CI Paquete search:', filters.ciPaquete)
+        params.append('ClPaquete', filters.ciPaquete)
+      }
       if (filters.desde) params.append('Desde', format(filters.desde, 'dd/MM/yyyy'))
       if (filters.hasta) params.append('Hasta', format(filters.hasta, 'dd/MM/yyyy'))
       
@@ -159,6 +162,24 @@ function RecibidorMiamiContent() {
       if (data.success) {
         setPackages(data.data)
         setTotalCount(data.totalCount)
+        
+        // Update CI Paquete search state if it was a CI Paquete search
+        if (filters.ciPaquete && filters.ciPaquete.length >= 3) {
+          console.log('CI Paquete search results:', {
+            searchTerm: filters.ciPaquete,
+            totalCount: data.totalCount,
+            sampleResults: data.data.slice(0, 3).map(p => ({ 
+              nid: p.nid, 
+              ciPaquete: p.ciPaquete,
+              tracking: p.tracking 
+            }))
+          })
+          setCiPaqueteSearchState({
+            isSearching: false,
+            resultCount: data.totalCount,
+            hasError: false
+          })
+        }
         
         // Show success toast only on filter changes (not on initial load or page changes)
         const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
@@ -193,6 +214,14 @@ function RecibidorMiamiContent() {
       setError(errorMessage)
       setPackages([])
       setTotalCount(0)
+      
+      // Update CI Paquete search state on error
+      if (filters.ciPaquete && filters.ciPaquete.length >= 3) {
+        setCiPaqueteSearchState({
+          isSearching: false,
+          hasError: true
+        })
+      }
       
       // If it's a connection error, provide helpful feedback
       if (errorMessage.includes('fetch') || errorMessage.includes('NetworkError')) {
@@ -393,15 +422,57 @@ function RecibidorMiamiContent() {
   }
   
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [ciPaqueteTimeout, setCiPaqueteTimeout] = useState<NodeJS.Timeout | null>(null)
   
-  // Cleanup timeout on unmount to prevent memory leaks
+  // CI Paquete search state
+  const [ciPaqueteSearchState, setCiPaqueteSearchState] = useState<{
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+  }>({
+    isSearching: false
+  })
+  
+  // CI Paquete search handler with debouncing
+  const handleCiPaqueteChange = useCallback((value: string) => {    
+    // Update the input value immediately (synchronously)
+    handleFilterChange('ciPaquete', value)
+    
+    // Clear previous timeout
+    if (ciPaqueteTimeout) {
+      clearTimeout(ciPaqueteTimeout)
+    }
+    
+    // Reset search state if less than 3 digits
+    if (value.length < 3) {
+      setCiPaqueteSearchState({ isSearching: false })
+      return
+    }
+    
+    // Set searching state
+    setCiPaqueteSearchState({ isSearching: true })
+    
+    // Debounced search after 800ms - this will trigger fetchPackages
+    const timeout = setTimeout(() => {
+      // The search will happen automatically because we already updated the filter
+      // and fetchPackages is watching the filters with useEffect
+      console.log('Debounced CI Paquete search triggered for:', value)
+    }, 800)
+    
+    setCiPaqueteTimeout(timeout)
+  }, [handleFilterChange, ciPaqueteTimeout])
+
+  // Cleanup timeouts on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       if (searchTimeout) {
         clearTimeout(searchTimeout)
       }
+      if (ciPaqueteTimeout) {
+        clearTimeout(ciPaqueteTimeout)
+      }
     }
-  }, [searchTimeout])
+  }, [searchTimeout, ciPaqueteTimeout])
   
   const handleQuickFilter = (filterType: string, value: string) => {
     console.log(`Applying quick filter: ${filterType} = ${value}`)
@@ -542,11 +613,20 @@ function RecibidorMiamiContent() {
           elementosPorPagina: filters.elementosPorPagina
         }}
         availableTarimas={availableTarimas}
-        onFilterChange={(key, value) => handleFilterChange(key as keyof PackageFilters, value)}
-        onClearFilter={clearFilter}
+        onFilterChange={(key, value) => {
+          handleFilterChange(key as keyof PackageFilters, value)
+        }}
+        onCiPaqueteChange={handleCiPaqueteChange}
+        onClearFilter={(key) => {
+          if (key === 'ciPaquete') {
+            setCiPaqueteSearchState({ isSearching: false })
+          }
+          clearFilter(key)
+        }}
         isOpen={isAdvancedOpen}
         onToggle={() => setIsAdvancedOpen(!isAdvancedOpen)}
         activeFiltersCount={getActiveAdvancedFiltersCount()}
+        ciPaqueteSearchState={ciPaqueteSearchState}
       />
 
 

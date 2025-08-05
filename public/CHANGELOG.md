@@ -5,7 +5,7 @@ Todas las mejoras notables de este proyecto serán documentadas en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2025-01-08
+## [1.0.2] - 2025-08-05
 
 ### Agregado
 - **Botón "What's New"** en la barra lateral para mostrar actualizaciones de versiones
@@ -17,7 +17,7 @@ y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0
 - **Validación mejorada** de formularios
 - **Experiencia de usuario** optimizada
 
-## [1.1.5] - 2025-01-07
+## [1.0.1] - 2025-01-07
 
 ### Corregido
 - **Búsqueda debounced mejorada** con mejor rendimiento y UX
@@ -29,31 +29,6 @@ y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0
 - **Timeout de búsqueda** aumentado a 800ms para mejor experiencia
 - **Indicadores de carga** más claros durante búsquedas
 - **Cancelación de peticiones** para evitar resultados desactualizados
-
-## [1.1.0] - 2025-01-06
-
-### Agregado
-- **Búsqueda rápida inteligente** en Recibidor de Miami
-- **Filtros avanzados** con búsqueda por CI, tracking, cliente y tarima
-- **Paginación dinámica** mejorada
-- **Debounced search** para mejor rendimiento
-
-### Mejorado
-- **Interfaz de filtros** más intuitiva y responsive
-- **Gestión de estado** optimizada para búsquedas
-- **Tiempo de respuesta** reducido en consultas de base de datos
-
-## [1.0.5] - 2025-01-05
-
-### Corregido
-- **Compatibilidad con base de datos Drupal** mejorada
-- **Mapeo de campos** optimizado para consultas complejas
-- **Filtros de fecha** funcionando correctamente
-
-### Agregado
-- **Validación robusta** con Zod schemas
-- **Manejo de errores** mejorado en API
-- **Logging** detallado para debugging
 
 ## [1.0.0] - 2025-01-01
 

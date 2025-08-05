@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -118,12 +118,24 @@ function RecibidorMiamiContent() {
   const { smartSearch } = useFastSearch()
 
   // Fetch packages function
-  const fetchPackages = useCallback(async () => {
+  const fetchPackages = useCallback(async (options?: { skipToast?: boolean }) => {
     return await Sentry.startSpan({
       name: 'Package Search',
       op: 'data.fetch'
     }, async () => {
+      // Declare abortController at the top level
+      let abortController: AbortController | null = null
+      
       try {
+        // Cancel previous request
+        if (fetchAbortControllerRef.current) {
+          fetchAbortControllerRef.current.abort()
+        }
+        
+        // Create new abort controller
+        abortController = new AbortController()
+        fetchAbortControllerRef.current = abortController
+        
         setLoading(true)
         setError(null)
 
@@ -151,7 +163,9 @@ function RecibidorMiamiContent() {
       params.append('SortDirection', 'desc')
 
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'
-      const response = await fetch(`${apiBaseUrl}/api/Packages?${params.toString()}`)
+      const response = await fetch(`${apiBaseUrl}/api/Packages?${params.toString()}`, {
+        signal: abortController.signal
+      })
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -180,6 +194,24 @@ function RecibidorMiamiContent() {
             hasError: false
           })
         }
+
+        // Update Client search state if it was a client search
+        if (filters.buscarPorCliente && filters.buscarPorCliente.length >= 2) {
+          console.log('Client search results:', {
+            searchTerm: filters.buscarPorCliente,
+            totalCount: data.totalCount,
+            sampleResults: data.data.slice(0, 3).map(p => ({ 
+              nid: p.nid, 
+              creadoPor: p.creadoPor,
+              tracking: p.tracking 
+            }))
+          })
+          setClientSearchState({
+            isSearching: false,
+            resultCount: data.totalCount,
+            hasError: false
+          })
+        }
         
         // Show success toast only on filter changes (not on initial load or page changes)
         const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
@@ -203,6 +235,12 @@ function RecibidorMiamiContent() {
         throw new Error(data.message || 'Failed to fetch packages')
       }
     } catch (err) {
+      // Handle aborted requests gracefully - don't show errors or update state
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Request was aborted, ignoring...')
+        return
+      }
+      
       console.error('Error fetching packages:', err)
       Sentry.captureException(err, {
         tags: {
@@ -218,6 +256,14 @@ function RecibidorMiamiContent() {
       // Update CI Paquete search state on error
       if (filters.ciPaquete && filters.ciPaquete.length >= 3) {
         setCiPaqueteSearchState({
+          isSearching: false,
+          hasError: true
+        })
+      }
+
+      // Update Client search state on error
+      if (filters.buscarPorCliente && filters.buscarPorCliente.length >= 2) {
+        setClientSearchState({
           isSearching: false,
           hasError: true
         })
@@ -244,6 +290,10 @@ function RecibidorMiamiContent() {
       }
       } finally {
         setLoading(false)
+        // Clean up the AbortController reference
+        if (abortController && fetchAbortControllerRef.current === abortController) {
+          fetchAbortControllerRef.current = null
+        }
       }
     })
   }, [filters])
@@ -423,9 +473,24 @@ function RecibidorMiamiContent() {
   
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   const [ciPaqueteTimeout, setCiPaqueteTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [clientTimeout, setClientTimeout] = useState<NodeJS.Timeout | null>(null)
+  
+  // AbortController refs for canceling previous requests
+  const fetchAbortControllerRef = useRef<AbortController | null>(null)
+  const clientSearchAbortControllerRef = useRef<AbortController | null>(null)
+  const ciPaqueteSearchAbortControllerRef = useRef<AbortController | null>(null)
   
   // CI Paquete search state
   const [ciPaqueteSearchState, setCiPaqueteSearchState] = useState<{
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+  }>({
+    isSearching: false
+  })
+
+  // Client search state
+  const [clientSearchState, setClientSearchState] = useState<{
     isSearching: boolean
     resultCount?: number
     hasError?: boolean
@@ -462,7 +527,34 @@ function RecibidorMiamiContent() {
     setCiPaqueteTimeout(timeout)
   }, [handleFilterChange, ciPaqueteTimeout])
 
-  // Cleanup timeouts on unmount to prevent memory leaks
+  // Client search handler with debouncing
+  const handleClientChange = useCallback((value: string) => {
+    // Update the input value immediately (synchronously)
+    handleFilterChange('buscarPorCliente', value)
+    
+    // Clear previous timeout
+    if (clientTimeout) {
+      clearTimeout(clientTimeout)
+    }
+    
+    // Reset search state if less than 2 characters
+    if (value.length < 2) {
+      setClientSearchState({ isSearching: false })
+      return
+    }
+    
+    // Set searching state
+    setClientSearchState({ isSearching: true })
+    
+    // Debounced search after 400ms - faster for text search
+    const timeout = setTimeout(() => {
+      console.log('Debounced client search triggered for:', value)
+    }, 400)
+    
+    setClientTimeout(timeout)
+  }, [handleFilterChange, clientTimeout])
+
+  // Cleanup timeouts and abort controllers on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       if (searchTimeout) {
@@ -471,8 +563,21 @@ function RecibidorMiamiContent() {
       if (ciPaqueteTimeout) {
         clearTimeout(ciPaqueteTimeout)
       }
+      if (clientTimeout) {
+        clearTimeout(clientTimeout)
+      }
+      // Cancel any ongoing requests
+      if (fetchAbortControllerRef.current) {
+        fetchAbortControllerRef.current.abort()
+      }
+      if (clientSearchAbortControllerRef.current) {
+        clientSearchAbortControllerRef.current.abort()
+      }
+      if (ciPaqueteSearchAbortControllerRef.current) {
+        ciPaqueteSearchAbortControllerRef.current.abort()
+      }
     }
-  }, [searchTimeout, ciPaqueteTimeout])
+  }, [searchTimeout, ciPaqueteTimeout, clientTimeout])
   
   const handleQuickFilter = (filterType: string, value: string) => {
     console.log(`Applying quick filter: ${filterType} = ${value}`)
@@ -617,9 +722,12 @@ function RecibidorMiamiContent() {
           handleFilterChange(key as keyof PackageFilters, value)
         }}
         onCiPaqueteChange={handleCiPaqueteChange}
+        onClientChange={handleClientChange}
         onClearFilter={(key) => {
           if (key === 'ciPaquete') {
             setCiPaqueteSearchState({ isSearching: false })
+          } else if (key === 'buscarPorCliente') {
+            setClientSearchState({ isSearching: false })
           }
           clearFilter(key)
         }}
@@ -627,6 +735,7 @@ function RecibidorMiamiContent() {
         onToggle={() => setIsAdvancedOpen(!isAdvancedOpen)}
         activeFiltersCount={getActiveAdvancedFiltersCount()}
         ciPaqueteSearchState={ciPaqueteSearchState}
+        clientSearchState={clientSearchState}
       />
 
 

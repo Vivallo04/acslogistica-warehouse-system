@@ -43,6 +43,12 @@ interface AdvancedFiltersProps {
     hasError?: boolean
   }
   onCiPaqueteChange?: (value: string) => void
+  clientSearchState?: {
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+  }
+  onClientChange?: (value: string) => void
 }
 
 interface AdvancedFilterChipProps {
@@ -85,7 +91,9 @@ export function AdvancedFilters({
   onToggle,
   activeFiltersCount,
   ciPaqueteSearchState,
-  onCiPaqueteChange
+  onCiPaqueteChange,
+  clientSearchState,
+  onClientChange
 }: AdvancedFiltersProps) {
   const isTrackingActive = !!(filters.buscarPorTracking && filters.buscarPorTracking.trim() !== '')
   const isGuiaActive = false // Disabled filter
@@ -188,19 +196,84 @@ export function AdvancedFilters({
                 </Select>
               </div>
 
-              {/* Client Search */}
+              {/* Client Search - Enhanced */}
               <div className="space-y-3">
                 <Label htmlFor="advanced-cliente" className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 sm:gap-2">
                   <User className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span className="text-xs sm:text-sm">Buscar por Cliente</span>
                 </Label>
-                <Input
-                  id="advanced-cliente"
-                  placeholder="Nombre del cliente"
-                  value={filters.buscarPorCliente}
-                  onChange={(e) => onFilterChange('buscarPorCliente', e.target.value)}
-                  className="rounded-xl border-2 transition-all duration-200 focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/20"
-                />
+                <div className="relative">
+                  <Input
+                    id="advanced-cliente"
+                    type="text"
+                    placeholder="Nombre del cliente"
+                    value={filters.buscarPorCliente}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (onClientChange) {
+                        onClientChange(value)
+                      } else {
+                        onFilterChange('buscarPorCliente', value)
+                      }
+                    }}
+                    className={cn(
+                      "rounded-xl border-2 transition-all duration-200 pr-10",
+                      clientSearchState?.isSearching 
+                        ? "border-blue-500 focus:border-blue-600" 
+                        : clientSearchState?.resultCount !== undefined
+                        ? clientSearchState.resultCount > 0
+                          ? "border-green-500 focus:border-green-600"
+                          : "border-orange-500 focus:border-orange-600"
+                        : "focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/20"
+                    )}
+                  />
+                  
+                  {/* Right side indicators */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    {clientSearchState?.isSearching ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    ) : filters.buscarPorCliente && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onClearFilter('buscarPorCliente')}
+                        className="h-6 w-6 p-0 hover:bg-muted rounded-full"
+                      >
+                        <XCircle className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Search Status */}
+                {filters.buscarPorCliente && filters.buscarPorCliente.length >= 2 && (
+                  <div className="text-xs">
+                    {clientSearchState?.isSearching ? (
+                      <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Buscando clientes con '{filters.buscarPorCliente}'...
+                      </span>
+                    ) : clientSearchState?.resultCount !== undefined ? (
+                      <span className={cn(
+                        "flex items-center gap-1",
+                        clientSearchState.resultCount > 0 
+                          ? "text-green-600 dark:text-green-400" 
+                          : "text-orange-600 dark:text-orange-400"
+                      )}>
+                        <User className="h-3 w-3" />
+                        {clientSearchState.resultCount > 0 
+                          ? `Encontrados ${clientSearchState.resultCount} paquetes de clientes con '${filters.buscarPorCliente}'`
+                          : `No se encontraron clientes con '${filters.buscarPorCliente}'`
+                        }
+                      </span>
+                    ) : filters.buscarPorCliente.length < 2 && (
+                      <span className="text-muted-foreground">
+                        Escribe al menos 2 caracteres para buscar
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* CI Paquete - Enhanced Search */}

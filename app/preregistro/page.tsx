@@ -642,7 +642,7 @@ function PreRegistroContent() {
             {/* Peso */}
             <div className="space-y-2">
               <Label htmlFor="peso" className="text-sm font-medium flex items-center gap-2">
-                Peso
+                Peso <span className="text-red-500">*</span>
                 {batchSession?.isActive && batchSession.defaultValues.peso && (
                   <Badge variant="outline" className="text-xs bg-accent-blue/10 text-accent-blue border-accent-blue/30">
                     Auto-llenado
@@ -662,6 +662,7 @@ function PreRegistroContent() {
                       ? "Valor predeterminado del lote"
                       : "2.5"
                   }
+                  required
                   className={cn(
                     "w-full transition-all duration-200",
                     batchSession?.isActive && batchSession.defaultValues.peso && "bg-accent-blue/5 border-accent-blue/30"
@@ -715,6 +716,7 @@ function PreRegistroContent() {
                 disabled={
                   !formData.numeroTracking.trim() || 
                   !formData.numeroTarima.trim() ||
+                  !formData.peso.trim() ||
                   (batchSession?.isActive && batchSession.status === 'paused')
                 }
               >

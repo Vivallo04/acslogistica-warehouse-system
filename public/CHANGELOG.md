@@ -22,13 +22,12 @@ y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0
 ### Corregido
 - **Búsqueda debounced mejorada** con mejor rendimiento y UX
 - **Problema de re-renderizado infinito** en filtros de búsqueda
-- **Carga inicial** ahora muestra paquetes de los últimos 45 días correctamente
+- **Carga inicial** ahora muestra paquetes de los últimos 45 días
 - **Filtros avanzados** con mejor funcionalidad de tarima y cliente
 
 ### Mejorado
 - **Timeout de búsqueda** aumentado a 800ms para mejor experiencia
 - **Indicadores de carga** más claros durante búsquedas
-- **Cancelación de peticiones** para evitar resultados desactualizados
 
 ## [1.0.0] - 2025-01-01
 
@@ -36,17 +35,12 @@ y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0
 - **Sistema de gestión de almacén (WMS)** inicial
 - **Módulo Pre-Registro** para registro rápido de paquetes
 - **Módulo Recibidor de Miami** para gestión de paquetes
-- **Autenticación Firebase** con roles de usuario
-- **Integración MySQL** con base de datos Drupal existente
-- **Interfaz responsive** con Tailwind CSS y shadcn/ui
-- **Dashboard principal** con métricas básicas
-- **Gestión de paquetes** completa
+- **Autenticación** con roles de usuario
+- **Integración** con base de datos Drupal existente
 - **Sistema de roles** (super_admin, manager, pending)
 - **Filtros avanzados** y búsqueda
 - **Modo batch** para procesamiento masivo
 - **Escaneo de códigos de barras**
-- **Integración IA** para reconocimiento de contenido
-- **Exportación de datos** en múltiples formatos
 
 ---
 

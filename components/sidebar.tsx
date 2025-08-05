@@ -100,7 +100,7 @@ export function Sidebar() {
           </div>
           <div className="ml-3">
             <h1 className="text-lg font-semibold text-card-foreground leading-tight">ACS Logística</h1>
-            <p className="text-xs text-muted-foreground font-normal leading-tight">WareHouse</p>
+            <p className="text-xs text-muted-foreground font-normal leading-tight">Warehouse Management System</p>
           </div>
         </div>
       </div>

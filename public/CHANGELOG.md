@@ -5,6 +5,48 @@ Todas las mejoras notables de este proyecto serán documentadas en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-08-07
+
+### Agregado
+- **Actualización masiva de paquetes** en Recibidor de Miami
+  - Selecciona múltiples paquetes y cambia su estado de una vez
+  - Cambiar paquetes de "Vuelo Asignado" a "En Aduana" automáticamente  
+  - Botón "Acciones" con opciones para operaciones grupales
+  - Solo se actualizan paquetes que tienen el estado correcto
+- **Generación automática de documentos CI**
+  - Los paquetes procesados generan automáticamente su documento CI
+  - Descarga directa de PDFs desde el sistema
+  - Integración completa con el servicio de impresión
+- **Historial de sesión mejorado**
+  - Todos los paquetes procesados se guardan automáticamente en el historial
+  - Ver detalles completos de cada paquete registrado
+  - Exportar historial de trabajo a archivo CSV
+
+### Mejorado  
+- **Experiencia en Recibidor de Miami** más eficiente
+  - Interfaz más clara para seleccionar múltiples paquetes
+  - Confirmación antes de realizar cambios masivos
+  - Contador que muestra cuántos paquetes se pueden actualizar
+- **Mensajes de error más claros**
+  - Explicaciones específicas cuando algo no se puede procesar
+  - Información detallada sobre paquetes que no se pudieron actualizar
+  - Recuperación automática si solo algunos paquetes fallan
+
+### Removido
+- **Funciones temporalmente deshabilitadas** por mantenimiento del sistema
+  - Modo de procesamiento por lotes (Tecla F3)
+  - Escaneo rápido de códigos (Tecla F2)  
+  - Impresión de etiquetas (Tecla F4)
+  - Generación de reportes (Tecla F5)
+  - Panel de configuración
+  - Sincronización automática de datos
+
+### Corregido
+- **Botones ahora muestran texto** correctamente en pantallas pequeñas y grandes
+- **Teclas de función F2-F6** completamente desactivadas durante mantenimiento
+- **Interfaz más consistente** para elementos que están temporalmente deshabilitados
+- **Mejor rendimiento** al cargar y mostrar información de paquetes
+
 ## [1.0.2] - 2025-08-05
 
 ### Agregado

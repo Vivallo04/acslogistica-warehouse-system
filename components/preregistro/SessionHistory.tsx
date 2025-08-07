@@ -29,6 +29,8 @@ export interface ProcessedPackage {
   numeroTarima: string
   timestamp: Date
   estado: 'procesado' | 'pendiente'
+  ci?: string
+  pdfUrl?: string
 }
 
 interface BatchSession {
@@ -67,11 +69,12 @@ export function SessionHistory({
     if (packages.length === 0) return
 
     try {
-      const headers = ['Tracking', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
+      const headers = ['Tracking', 'CI', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
       const csvContent = [
         headers.join(','),
         ...packages.map(pkg => [
           `"${pkg.numeroTracking.replace(/"/g, '""')}"`,
+          `"${pkg.ci || '-'}"`,
           `"${pkg.numeroCasillero.replace(/"/g, '""')}"`,
           `"${pkg.contenido.replace(/"/g, '""')}"`,
           `"${pkg.peso.replace(/"/g, '""')}"`,
@@ -261,6 +264,7 @@ export function SessionHistory({
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[140px]">Tracking</TableHead>
+                      <TableHead className="w-[100px]">CI</TableHead>
                       <TableHead className="w-[120px]">Cliente</TableHead>
                       <TableHead>Contenido</TableHead>
                       <TableHead className="w-[80px]">Peso</TableHead>
@@ -274,6 +278,9 @@ export function SessionHistory({
                       <TableRow key={pkg.id}>
                         <TableCell className="font-mono text-sm">
                           {pkg.numeroTracking}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-accent-blue font-medium">
+                          {pkg.ci || '-'}
                         </TableCell>
                         <TableCell className="text-sm">
                           {pkg.numeroCasillero}
@@ -321,8 +328,15 @@ export function SessionHistory({
                   <div key={pkg.id} className="bg-muted/30 rounded-lg p-4 space-y-3">
                     {/* Header Row */}
                     <div className="flex items-center justify-between">
-                      <div className="font-mono text-sm font-medium truncate flex-1 mr-2">
-                        {pkg.numeroTracking}
+                      <div className="flex flex-col gap-1 flex-1 mr-2">
+                        <div className="font-mono text-sm font-medium truncate">
+                          {pkg.numeroTracking}
+                        </div>
+                        {pkg.ci && (
+                          <div className="font-mono text-xs text-accent-blue font-medium">
+                            CI: {pkg.ci}
+                          </div>
+                        )}
                       </div>
                       <Badge 
                         variant={pkg.estado === 'procesado' ? 'default' : 'secondary'}

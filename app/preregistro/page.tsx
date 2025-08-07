@@ -17,6 +17,16 @@ import { ActionToolbar } from "@/components/preregistro/ActionToolbar"
 import { CIDocumentViewer } from "@/components/preregistro/CIDocumentViewer"
 import { AIContentScanner } from "@/components/preregistro/AIContentScanner"
 import { SessionHistory, ProcessedPackage } from "@/components/preregistro/SessionHistory"
+import { 
+  searchPackagesByTracking,
+  processPackage,
+  getCasilleros,
+  validateTrackingNumber,
+  validatePeso,
+  PreregistroPackage,
+  TrackingSearchResult,
+  CasilleroOption
+} from "@/lib/preregistro-api"
 import { BatchModePanel } from "@/components/preregistro/BatchModePanel"
 import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { useToast } from "@/hooks/use-toast"
@@ -28,6 +38,12 @@ interface PreRegistroForm {
   contenido: string
   peso: string
   numeroTarima: string
+}
+
+interface TrackingSearchState {
+  isSearching: boolean
+  searchResults: TrackingSearchResult | null
+  showSuggestions: boolean
 }
 
 interface BatchSession {
@@ -107,14 +123,47 @@ function PreRegistroContent() {
   // Scanner compatibility
   const [scannerMode, setScannerMode] = useState(false)
   
-  // Casilleros/clientes data - to be populated from API
-  const casilleroOptions: { value: string; label: string }[] = []
+  // Casilleros/clientes data - loaded from API
+  const [casilleroOptions, setCasilleroOptions] = useState<CasilleroOption[]>([])
+  const [casilleroLoading, setCasilleroLoading] = useState(true)
+  
+  // Tracking search state
+  const [trackingSearch, setTrackingSearch] = useState<TrackingSearchState>({
+    isSearching: false,
+    searchResults: null,
+    showSuggestions: false
+  })
+  
+  // Processing state
+  const [isProcessing, setIsProcessing] = useState(false)
   
   // Filter options based on search
   const filteredCasilleros = casilleroOptions.filter(option =>
     option.label.toLowerCase().includes(casilleroSearch.toLowerCase()) ||
     option.value.toLowerCase().includes(casilleroSearch.toLowerCase())
   )
+  
+  // Load casilleros on component mount
+  useEffect(() => {
+    const loadCasilleros = async () => {
+      try {
+        setCasilleroLoading(true)
+        const casilleros = await getCasilleros()
+        setCasilleroOptions(casilleros)
+      } catch (error) {
+        console.error('Error loading casilleros:', error)
+        toast({
+          variant: "destructive",
+          title: "Error al cargar casilleros",
+          description: "No se pudieron cargar los casilleros disponibles"
+        })
+      } finally {
+        setCasilleroLoading(false)
+      }
+    }
+    
+    loadCasilleros()
+  }, [toast])
 
   const handleInputChange = (field: keyof PreRegistroForm, value: string) => {
     setFormData(prev => ({
@@ -123,14 +172,67 @@ function PreRegistroContent() {
     }))
   }
 
-  // Handle tracking number input with scanner support
-  const handleTrackingInputChange = (value: string) => {
+  // Handle tracking number input with scanner support and search
+  const handleTrackingInputChange = async (value: string) => {
     handleInputChange("numeroTracking", value)
     
     // Auto-detect scanner input (typically ends with Enter and is rapid)
     if (value.length > 8) { // Most tracking numbers are longer than 8 characters
       setScannerMode(true)
       setTimeout(() => setScannerMode(false), 2000) // Reset scanner mode after 2 seconds
+    }
+    
+    // Search for existing packages when tracking number is long enough
+    if (value.length >= 3 && validateTrackingNumber(value)) {
+      try {
+        setTrackingSearch(prev => ({ ...prev, isSearching: true }))
+        
+        const searchResults = await searchPackagesByTracking(value)
+        
+        setTrackingSearch({
+          isSearching: false,
+          searchResults,
+          showSuggestions: searchResults.matchType !== 'none'
+        })
+        
+        // If exact match found, populate form with existing data
+        if (searchResults.matchType === 'exact' && searchResults.existingPackage) {
+          const existing = searchResults.existingPackage
+          setFormData(prev => ({
+            ...prev,
+            numeroCasillero: existing.numeroCasillero || prev.numeroCasillero,
+            contenido: existing.contenido || prev.contenido,
+            peso: existing.peso || prev.peso,
+            numeroTarima: existing.numeroTarima || prev.numeroTarima
+          }))
+          
+          toast({
+            title: "Paquete encontrado",
+            description: `Información cargada para tracking ${value}`,
+            duration: 3000
+          })
+        } else if (searchResults.matchType === 'partial' && searchResults.packages.length > 0) {
+          toast({
+            title: "Coincidencias parciales",
+            description: `Se encontraron ${searchResults.packages.length} paquetes similares`,
+            duration: 4000
+          })
+        }
+      } catch (error) {
+        console.error('Error searching tracking:', error)
+        setTrackingSearch({
+          isSearching: false,
+          searchResults: null,
+          showSuggestions: false
+        })
+      }
+    } else {
+      // Clear search results if tracking number is too short
+      setTrackingSearch({
+        isSearching: false,
+        searchResults: null,
+        showSuggestions: false
+      })
     }
   }
 
@@ -156,55 +258,106 @@ function PreRegistroContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Validate required fields
+    if (!validateTrackingNumber(formData.numeroTracking)) {
+      toast({
+        variant: "destructive",
+        title: "Número de tracking inválido",
+        description: "Ingrese un número de tracking válido (mínimo 3 caracteres)"
+      })
+      return
+    }
+    
+    if (!validatePeso(formData.peso)) {
+      toast({
+        variant: "destructive",
+        title: "Peso inválido",
+        description: "Ingrese un peso válido mayor a 0"
+      })
+      return
+    }
+    
     try {
+      setIsProcessing(true)
+      
       // Track form submission with Sentry
       await Sentry.startSpan({ 
         name: 'Package Pre-Registration',
         op: 'form.submit'
       }, async () => {
-        // Create processed package
-        const newPackage: ProcessedPackage = {
-          id: `pkg_${Date.now()}`,
-          numeroTracking: formData.numeroTracking,
+        // Process package through API
+        const packageData: PreregistroPackage = {
+          numeroTracking: formData.numeroTracking.trim(),
           numeroCasillero: formData.numeroCasillero,
-          contenido: formData.contenido,
+          contenido: formData.contenido.trim(),
           peso: formData.peso,
-          numeroTarima: formData.numeroTarima,
-          timestamp: new Date(),
-          estado: 'procesado'
+          numeroTarima: formData.numeroTarima
         }
         
-        // Add to session history
-        setProcessedPackages(prev => [...prev, newPackage])
+        // Pass existing package if found for status transition
+        const existingPackage = trackingSearch.searchResults?.existingPackage
+        const response = await processPackage(packageData, existingPackage)
         
-        // Update batch session if active
-        if (batchSession?.isActive && batchSession.status === 'active') {
-          setBatchSession(prev => prev ? { 
-            ...prev, 
-            packagesScanned: prev.packagesScanned + 1 
-          } : null)
-        }
-        
-        // Reset form - maintain batch defaults if in batch mode
-        if (batchSession?.isActive && batchSession.status === 'active') {
-          resetFormForBatch()
+        if (response.success && response.data) {
+          // Create processed package with real CI and data
+          const newPackage: ProcessedPackage = {
+            id: response.data.nid.toString(),
+            numeroTracking: formData.numeroTracking,
+            numeroCasillero: formData.numeroCasillero,
+            contenido: formData.contenido,
+            peso: formData.peso,
+            numeroTarima: formData.numeroTarima,
+            timestamp: new Date(),
+            estado: 'procesado',
+            ci: response.data.ci_paquete,
+            pdfUrl: response.data.pdfUrl
+          }
+          
+          // Add to session history
+          setProcessedPackages(prev => [...prev, newPackage])
+          
+          // Update batch session if active
+          if (batchSession?.isActive && batchSession.status === 'active') {
+            setBatchSession(prev => prev ? { 
+              ...prev, 
+              packagesScanned: prev.packagesScanned + 1 
+            } : null)
+          }
+          
+          // Reset form - maintain batch defaults if in batch mode
+          if (batchSession?.isActive && batchSession.status === 'active') {
+            resetFormForBatch()
+          } else {
+            resetForm()
+          }
+          
+          // Clear tracking search state
+          setTrackingSearch({
+            isSearching: false,
+            searchResults: null,
+            showSuggestions: false
+          })
+          
+          const isUpdate = !!existingPackage
+          const actionText = isUpdate ? "actualizado a Vuelo Asignado" : "creado"
+          
+          toast({
+            title: `Paquete ${actionText} exitosamente`,
+            description: batchSession?.isActive 
+              ? `CI: ${response.data.ci_paquete} - Lote: ${(batchSession.packagesScanned || 0) + 1} paquetes`
+              : `CI: ${response.data.ci_paquete} ${isUpdate ? 'mantenido' : 'generado'} para tracking ${formData.numeroTracking}`,
+            duration: 5000
+          })
+          
+          // Auto-focus tracking input for rapid scanning in batch mode
+          if (batchSession?.isActive && batchSession.status === 'active') {
+            setTimeout(() => {
+              trackingInputRef.current?.focus()
+              trackingInputRef.current?.select()
+            }, 100)
+          }
         } else {
-          resetForm()
-        }
-        
-        toast({
-          title: "Paquete procesado",
-          description: batchSession?.isActive 
-            ? `Tracking ${formData.numeroTracking} - Lote: ${batchSession.packagesScanned + 1} paquetes`
-            : `Tracking ${formData.numeroTracking} agregado al historial`,
-        })
-        
-        // Auto-focus tracking input for rapid scanning in batch mode
-        if (batchSession?.isActive && batchSession.status === 'active') {
-          setTimeout(() => {
-            trackingInputRef.current?.focus()
-            trackingInputRef.current?.select()
-          }, 100)
+          throw new Error(response.message || response.error || 'Error desconocido')
         }
       })
     } catch (error) {
@@ -214,11 +367,16 @@ function PreRegistroContent() {
           hasTracking: !!formData.numeroTracking.trim()
         }
       })
+      
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       toast({
         variant: "destructive",
         title: "Error al procesar paquete",
-        description: "Ocurrió un error inesperado. Intente nuevamente.",
+        description: errorMessage,
+        duration: 6000
       })
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -570,12 +728,14 @@ function PreRegistroContent() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={casilleroOpen}
+                    disabled={casilleroLoading}
                     className="w-full justify-between h-12 text-base sm:h-10 sm:text-sm text-left"
                   >
                     <span className="truncate">
-                      {formData.numeroCasillero
-                        ? casilleroOptions.find((option) => option.value === formData.numeroCasillero)?.label
-                        : "Selecciona un casillero o cliente"}
+                      {casilleroLoading ? "Cargando casilleros..." :
+                        formData.numeroCasillero
+                          ? casilleroOptions.find((option) => option.value === formData.numeroCasillero)?.label
+                          : "Selecciona un casillero o cliente"}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -589,7 +749,9 @@ function PreRegistroContent() {
                       className="h-12 sm:h-10"
                     />
                     <CommandList>
-                      <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+                      <CommandEmpty>
+                        {casilleroLoading ? "Cargando..." : "No se encontraron resultados."}
+                      </CommandEmpty>
                       <CommandGroup>
                         {filteredCasilleros.map((option) => (
                           <CommandItem
@@ -659,12 +821,32 @@ function PreRegistroContent() {
                   <span className="flex items-center gap-2">
                     Número de Tracking <span className="text-red-500">*</span>
                   </span>
-                  {scannerMode && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse self-start sm:self-auto">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      Modo Escáner
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {scannerMode && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse self-start sm:self-auto">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        Modo Escáner
+                      </span>
+                    )}
+                    {trackingSearch.isSearching && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full self-start sm:self-auto">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-spin"></div>
+                        Buscando...
+                      </span>
+                    )}
+                    {trackingSearch.searchResults?.matchType === 'exact' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full self-start sm:self-auto">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        Encontrado
+                      </span>
+                    )}
+                    {trackingSearch.searchResults?.matchType === 'partial' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full self-start sm:self-auto">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        Similares: {trackingSearch.searchResults.packages.length}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Label>
               <Input
@@ -731,17 +913,21 @@ function PreRegistroContent() {
                     : "bg-accent-blue hover:bg-accent-blue/90 text-white"
                 )}
                 disabled={
+                  isProcessing ||
                   !formData.numeroTracking.trim() || 
                   !formData.numeroTarima.trim() ||
                   !formData.peso.trim() ||
-                  (batchSession?.isActive && batchSession.status === 'paused')
+                  (batchSession?.isActive && batchSession.status === 'paused') ||
+                  trackingSearch.isSearching
                 }
               >
                 <span className="flex items-center justify-center gap-2">
                   <span className="truncate">
-                    {batchSession?.isActive && batchSession.status === 'active' 
-                      ? `Escanear Lote (${batchSession.packagesScanned + 1})`
-                      : 'Procesar'
+                    {isProcessing
+                      ? 'Procesando...'
+                      : batchSession?.isActive && batchSession.status === 'active' 
+                        ? `Escanear Lote (${(batchSession.packagesScanned || 0) + 1})`
+                        : 'Procesar'
                     }
                   </span>
                   <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-white/20 rounded">Ctrl+S</kbd>
@@ -766,9 +952,9 @@ function PreRegistroContent() {
         {/* Right Column: CI Document Viewer and Batch Panel */}
         <div className="h-fit space-y-4 sm:space-y-6">
           <CIDocumentViewer
-            ciNumber={formData.numeroTracking ? "1234567" : undefined}
-            pdfUrl={formData.numeroTracking ? "/sample-ci-document.pdf" : undefined}
-            isLoading={false}
+            ciNumber={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.ci : undefined}
+            pdfUrl={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.pdfUrl : undefined}
+            isLoading={isProcessing}
           />
           
           {/* Batch Mode Panel */}

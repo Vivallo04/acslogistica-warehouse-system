@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plane, Edit, Eye } from "lucide-react"
+import { Plane, Edit, Eye, MoreVertical, RefreshCw, ArrowRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { bulkUpdatePackageStatus, filterUpdatablePackages, formatStatusUpdateMessage, STATUS_MAPPING } from "@/lib/recibidor-api"
 import { SearchHero } from "@/components/recibidor-miami/SearchHero"
 import { SmartFilterBar } from "@/components/recibidor-miami/SmartFilterBar"
 import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
@@ -93,6 +95,7 @@ function RecibidorMiamiContent() {
   const [fastSearchMeta, setFastSearchMeta] = useState<SearchResult | null>(null)
   const [isPaginationLoading, setIsPaginationLoading] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false)
   
   // Filter state
   const [filters, setFilters] = useState<PackageFilters>({
@@ -737,6 +740,90 @@ function RecibidorMiamiContent() {
     }
   }
 
+  // Status update functionality
+  const handleBulkStatusUpdate = async () => {
+    if (selectedPackages.size === 0) {
+      toast({
+        variant: "destructive",
+        title: "Sin selección",
+        description: "Selecciona al menos un paquete para actualizar",
+      })
+      return
+    }
+
+    // Get selected packages data
+    const selectedPackagesData = (fastSearchResults || packages).filter(pkg => 
+      selectedPackages.has(pkg.nid)
+    )
+
+    // Filter packages that can be updated (only "Vuelo Asignado" status)
+    const updatablePackages = filterUpdatablePackages(selectedPackagesData)
+    
+    if (updatablePackages.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Sin paquetes elegibles",
+        description: "Ninguno de los paquetes seleccionados tiene estado 'Vuelo Asignado'",
+      })
+      return
+    }
+
+    // Show confirmation
+    const confirmMessage = `¿Confirmas actualizar ${updatablePackages.length} paquete${updatablePackages.length !== 1 ? 's' : ''} de 'Vuelo Asignado' a 'En Aduana'?`
+    
+    if (!window.confirm(confirmMessage)) {
+      return
+    }
+
+    setIsStatusUpdating(true)
+
+    try {
+      // Call the API to update package status
+      const response = await bulkUpdatePackageStatus(
+        updatablePackages.map(pkg => pkg.nid)
+      )
+
+      if (response.success && response.data) {
+        const { updatedCount, failedCount } = response.data
+        
+        // Show success message
+        toast({
+          title: "Estado actualizado",
+          description: formatStatusUpdateMessage(updatedCount, failedCount),
+        })
+
+        // Clear selection
+        setSelectedPackages(new Set())
+        
+        // Refresh the package list to show updated statuses
+        await fetchPackages({ skipToast: true })
+        
+      } else {
+        throw new Error(response.error || response.message)
+      }
+    } catch (error) {
+      console.error('Error updating package status:', error)
+      toast({
+        variant: "destructive",
+        title: "Error al actualizar",
+        description: error instanceof Error ? error.message : "Error desconocido",
+      })
+    } finally {
+      setIsStatusUpdating(false)
+    }
+  }
+
+  // Get count of packages that can be status updated
+  const getUpdatablePackagesCount = () => {
+    if (selectedPackages.size === 0) return 0
+    
+    const selectedPackagesData = (fastSearchResults || packages).filter(pkg => 
+      selectedPackages.has(pkg.nid)
+    )
+    
+    return filterUpdatablePackages(selectedPackagesData).length
+  }
+
 
   const totalPages = Math.ceil(totalCount / filters.elementosPorPagina)
   const startItem = (filters.pagina - 1) * filters.elementosPorPagina + 1
@@ -897,9 +984,43 @@ function RecibidorMiamiContent() {
                 <span className="text-sm text-muted-foreground">
                   {selectedPackages.size} seleccionados
                 </span>
-                <Button size="sm" variant="outline" className="rounded-full">
-                  Acciones
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="rounded-full" disabled={isStatusUpdating}>
+                      {isStatusUpdating ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Actualizando...
+                        </>
+                      ) : (
+                        <>
+                          <MoreVertical className="w-4 h-4 mr-2" />
+                          Acciones
+                        </>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80">
+                    <DropdownMenuItem 
+                      onClick={handleBulkStatusUpdate}
+                      disabled={isStatusUpdating || getUpdatablePackagesCount() === 0}
+                      className="flex items-center gap-2 py-3"
+                    >
+                      <div className="flex items-center gap-2 flex-1">
+                        <ArrowRight className="w-4 h-4 text-blue-600" />
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">Actualizar estado</span>
+                          <span className="text-xs text-muted-foreground">
+                            Vuelo Asignado → En Aduana
+                          </span>
+                          <span className="text-xs text-blue-600">
+                            {getUpdatablePackagesCount()} paquete{getUpdatablePackagesCount() !== 1 ? 's' : ''} elegible{getUpdatablePackagesCount() !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>

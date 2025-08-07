@@ -106,8 +106,8 @@ function PreRegistroContent() {
     numeroTarima: ""
   })
 
-  // Toolbar state
-  const [autoSync, setAutoSync] = useState(true)
+  // Toolbar state - Auto-sync disabled
+  const autoSync = false
   
   // Session management
   const [processedPackages, setProcessedPackages] = useState<ProcessedPackage[]>([])
@@ -406,59 +406,22 @@ function PreRegistroContent() {
 
   // Toolbar handlers
   const handleScanToggle = useCallback(() => {
-    setScannerMode(true)
-    
-    // Focus on tracking input using ref
-    trackingInputRef.current?.focus()
-    trackingInputRef.current?.select() // Select all text for easy replacement
-    
+    // Quick scan mode is temporarily disabled
     toast({
-      title: "Modo escaneo activado",
-      description: "Escanea o ingresa el número de tracking",
-      duration: 3000,
+      title: "Escaneo Rápido Deshabilitado",
+      description: "La función de escaneo rápido está temporalmente deshabilitada",
+      variant: "destructive"
     })
-    
-    // Reset scanner mode after 10 seconds if no input
-    setTimeout(() => setScannerMode(false), 10000)
   }, [toast])
 
-  const startBatchSession = useCallback(() => {
-    const newSession: BatchSession = {
-      id: `batch_${Date.now()}`,
-      isActive: true,
-      startedAt: new Date(),
-      packagesScanned: 0,
-      defaultValues: {
-        contenido: formData.contenido || "",
-        peso: formData.peso || "",
-        numeroTarima: formData.numeroTarima || palletOptions[0]?.value || "",
-        numeroCasillero: formData.numeroCasillero || ""
-      },
-      status: 'active'
-    }
-    
-    setBatchSession(newSession)
-    setShowBatchPanel(true)
-    
-    // Apply default values to form
-    applyBatchDefaults(newSession.defaultValues)
-    
-    toast({
-      title: "Modo lote iniciado",
-      description: `Sesión ${newSession.id.split('_')[1]} creada. Los valores actuales se usarán como predeterminados.`,
-      duration: 4000,
-    })
-  }, [formData.contenido, formData.peso, formData.numeroTarima, formData.numeroCasillero, palletOptions, toast])
-
   const handleBatchMode = useCallback(() => {
-    if (batchSession?.isActive) {
-      // Toggle batch panel if session is active
-      setShowBatchPanel(!showBatchPanel)
-    } else {
-      // Start new batch session
-      startBatchSession()
-    }
-  }, [batchSession?.isActive, showBatchPanel, startBatchSession])
+    // Batch mode is temporarily disabled
+    toast({
+      title: "Modo Lote Deshabilitado",
+      description: "El modo lote está temporalmente deshabilitado",
+      variant: "destructive"
+    })
+  }, [toast])
 
   const applyBatchDefaults = (defaults: BatchSession['defaultValues']) => {
     setFormData(prev => ({
@@ -538,31 +501,34 @@ function PreRegistroContent() {
 
   const handlePrintLabels = useCallback(() => {
     toast({
-      title: "Imprimir etiquetas",
-      description: "Función en desarrollo",
+      title: "Imprimir Etiquetas Deshabilitado",
+      description: "La función de imprimir etiquetas está temporalmente deshabilitada",
+      variant: "destructive"
     })
   }, [toast])
 
   const handleReports = useCallback(() => {
     toast({
-      title: "Reportes",
-      description: "Función en desarrollo",
+      title: "Reportes Deshabilitado",
+      description: "La función de reportes está temporalmente deshabilitada",
+      variant: "destructive"
     })
   }, [toast])
-
 
   const handleSettings = useCallback(() => {
     toast({
-      title: "Configuración",
-      description: "Función en desarrollo",
+      title: "Configuración Deshabilitada",
+      description: "La función de configuración está temporalmente deshabilitada",
+      variant: "destructive"
     })
   }, [toast])
 
-  const handleAutoSyncToggle = (enabled: boolean) => {
-    setAutoSync(enabled)
+  const handleAutoSyncToggle = () => {
+    // Auto-sync is temporarily disabled
     toast({
-      title: enabled ? "Sincronización activada" : "Sincronización desactivada",
-      description: enabled ? "Los cambios se guardarán automáticamente" : "Los cambios se guardarán manualmente",
+      title: "Sincronización Automática Deshabilitada",
+      description: "La función de sincronización automática está temporalmente deshabilitada",
+      variant: "destructive"
     })
   }
 
@@ -593,22 +559,15 @@ function PreRegistroContent() {
   // Comprehensive keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Function key shortcuts
-      if (event.key === 'F2') {
+      // All function key shortcuts are temporarily disabled
+      if (['F2', 'F3', 'F4', 'F5', 'F6'].includes(event.key)) {
         event.preventDefault()
-        handleScanToggle()
-      } else if (event.key === 'F3') {
-        event.preventDefault()
-        handleBatchMode()
-      } else if (event.key === 'F4') {
-        event.preventDefault()
-        handlePrintLabels()
-      } else if (event.key === 'F5') {
-        event.preventDefault()
-        handleReports()
-      } else if (event.key === 'F6') {
-        event.preventDefault()
-        handleSettings()
+        toast({
+          title: `${event.key} Deshabilitado`,
+          description: "Las teclas de función están temporalmente deshabilitadas",
+          variant: "destructive"
+        })
+        return
       }
       
       // Ctrl key combinations
@@ -629,7 +588,7 @@ function PreRegistroContent() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [formData, handleScanToggle, handleBatchMode, handlePrintLabels, handleReports, handleSettings, toast])
+  }, [formData, toast])
 
   return (
     <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">

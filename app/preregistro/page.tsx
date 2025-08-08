@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Package, Check, ChevronsUpDown } from "lucide-react"
+import { Package, Check, ChevronsUpDown, Shuffle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ActionToolbar } from "@/components/preregistro/ActionToolbar"
 import { CIDocumentViewer } from "@/components/preregistro/CIDocumentViewer"
@@ -21,11 +21,13 @@ import {
   searchPackagesByTracking,
   processPackage,
   getCasilleros,
+  searchClientsByName,
   validateTrackingNumber,
   validatePeso,
   PreregistroPackage,
   TrackingSearchResult,
-  CasilleroOption
+  CasilleroOption,
+  ClientSearchResult
 } from "@/lib/preregistro-api"
 import { BatchModePanel } from "@/components/preregistro/BatchModePanel"
 import { WMSErrorBoundary } from "@/components/ErrorBoundary"
@@ -116,14 +118,17 @@ function PreRegistroContent() {
   const [batchSession, setBatchSession] = useState<BatchSession | null>(null)
   const [showBatchPanel, setShowBatchPanel] = useState(false)
   
-  // Combobox state for casillero
-  const [casilleroOpen, setCasilleroOpen] = useState(false)
-  const [casilleroSearch, setCasilleroSearch] = useState("")
+  // Combobox state for client search
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false)
+  const [clientSearchTerm, setClientSearchTerm] = useState("")
+  const [clientSearchResults, setClientSearchResults] = useState<ClientSearchResult[]>([])
+  const [clientSearchLoading, setClientSearchLoading] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<ClientSearchResult | null>(null)
   
   // Scanner compatibility
   const [scannerMode, setScannerMode] = useState(false)
   
-  // Casilleros/clientes data - loaded from API
+  // Fallback: Casilleros/clientes data - loaded from API for backward compatibility
   const [casilleroOptions, setCasilleroOptions] = useState<CasilleroOption[]>([])
   const [casilleroLoading, setCasilleroLoading] = useState(true)
   
@@ -137,13 +142,7 @@ function PreRegistroContent() {
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false)
   
-  // Filter options based on search
-  const filteredCasilleros = casilleroOptions.filter(option =>
-    option.label.toLowerCase().includes(casilleroSearch.toLowerCase()) ||
-    option.value.toLowerCase().includes(casilleroSearch.toLowerCase())
-  )
-  
-  // Load casilleros on component mount
+  // Load casilleros on component mount (fallback)
   useEffect(() => {
     const loadCasilleros = async () => {
       try {
@@ -165,11 +164,46 @@ function PreRegistroContent() {
     loadCasilleros()
   }, [toast])
 
+  // Debounced client search
+  useEffect(() => {
+    const searchClients = async () => {
+      if (!clientSearchTerm || clientSearchTerm.length < 2) {
+        setClientSearchResults([])
+        return
+      }
+
+      try {
+        setClientSearchLoading(true)
+        const results = await searchClientsByName(clientSearchTerm)
+        setClientSearchResults(results)
+      } catch (error) {
+        console.error('Error searching clients:', error)
+        setClientSearchResults([])
+      } finally {
+        setClientSearchLoading(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(searchClients, 300)
+    return () => clearTimeout(debounceTimer)
+  }, [clientSearchTerm])
+
   const handleInputChange = (field: keyof PreRegistroForm, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+  }
+
+  // Handle client selection
+  const handleClientSelect = (client: ClientSearchResult) => {
+    setSelectedClient(client)
+    setFormData(prev => ({
+      ...prev,
+      numeroCasillero: client.uid.toString() // Store UID as value
+    }))
+    setClientDropdownOpen(false)
+    setClientSearchTerm("")
   }
 
   // Handle tracking number input with scanner support and search
@@ -205,6 +239,9 @@ function PreRegistroContent() {
             peso: existing.peso || prev.peso,
             numeroTarima: existing.numeroTarima || prev.numeroTarima
           }))
+          
+          // TODO: Set selected client based on existing package's numeroCasillero (UID)
+          // For now, we'll need to fetch client details if needed
           
           toast({
             title: "Paquete encontrado",
@@ -388,6 +425,8 @@ function PreRegistroContent() {
       peso: "",
       numeroTarima: ""
     })
+    setSelectedClient(null)
+    setClientSearchTerm("")
   }
 
   const resetFormForBatch = () => {
@@ -399,6 +438,7 @@ function PreRegistroContent() {
         peso: batchSession.defaultValues.peso,
         numeroTarima: batchSession.defaultValues.numeroTarima
       })
+      // TODO: Handle batch client selection - for now keep the selected client
     } else {
       resetForm()
     }
@@ -539,6 +579,37 @@ function PreRegistroContent() {
       contenido: content
     }))
   }
+
+  // Generate random tracking number
+  const generateRandomTrackingNumber = useCallback(() => {
+    // Generate a realistic-looking tracking number with common carrier patterns
+    const patterns = [
+      // UPS format: 1Z + 6 alphanumeric + 10 digits
+      () => `1Z${Math.random().toString(36).substring(2, 8).toUpperCase()}${Math.floor(Math.random() * 10000000000).toString().padStart(10, '0')}`,
+      // FedEx format: 4 digits + 4 digits + 4 digits
+      () => `${Math.floor(Math.random() * 9000 + 1000)}${Math.floor(Math.random() * 9000 + 1000)}${Math.floor(Math.random() * 9000 + 1000)}`,
+      // DHL format: 10 digits
+      () => Math.floor(Math.random() * 9000000000 + 1000000000).toString(),
+      // USPS format: 4 letters + 4 digits + 4 letters + 2 digits
+      () => `${Math.random().toString(36).substring(2, 6).toUpperCase()}${Math.floor(Math.random() * 9000 + 1000)}${Math.random().toString(36).substring(2, 6).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
+      // Amazon format: TBA + 15 digits
+      () => `TBA${Math.floor(Math.random() * 900000000000000 + 100000000000000).toString()}`
+    ]
+    
+    const randomPattern = patterns[Math.floor(Math.random() * patterns.length)]
+    const trackingNumber = randomPattern()
+    
+    setFormData(prev => ({
+      ...prev,
+      numeroTracking: trackingNumber
+    }))
+
+    toast({
+      title: "Número de Tracking Generado",
+      description: `Se ha generado el tracking: ${trackingNumber}`,
+      duration: 3000
+    })
+  }, [toast])
   
   // Session management handlers
   const handleClearSession = () => {
@@ -680,21 +751,19 @@ function PreRegistroContent() {
               <Label htmlFor="numeroCasillero" className="text-sm font-medium">
                 Número de Casillero / Cliente Asignado
               </Label>
-              <Popover open={casilleroOpen} onOpenChange={setCasilleroOpen}>
+              <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     ref={tarimaSelectRef}
                     variant="outline"
                     role="combobox"
-                    aria-expanded={casilleroOpen}
-                    disabled={casilleroLoading}
+                    aria-expanded={clientDropdownOpen}
                     className="w-full justify-between h-12 text-base sm:h-10 sm:text-sm text-left"
                   >
                     <span className="truncate">
-                      {casilleroLoading ? "Cargando casilleros..." :
-                        formData.numeroCasillero
-                          ? casilleroOptions.find((option) => option.value === formData.numeroCasillero)?.label
-                          : "Selecciona un casillero o cliente"}
+                      {selectedClient 
+                        ? selectedClient.displayName
+                        : "Buscar cliente..."}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -702,34 +771,32 @@ function PreRegistroContent() {
                 <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[250px] sm:max-h-[200px] p-0">
                   <Command>
                     <CommandInput 
-                      placeholder="Buscar casillero o cliente..." 
-                      value={casilleroSearch}
-                      onValueChange={setCasilleroSearch}
+                      placeholder="Buscar por nombre de cliente..." 
+                      value={clientSearchTerm}
+                      onValueChange={setClientSearchTerm}
                       className="h-12 sm:h-10"
                     />
                     <CommandList>
                       <CommandEmpty>
-                        {casilleroLoading ? "Cargando..." : "No se encontraron resultados."}
+                        {clientSearchLoading ? "Buscando..." : 
+                         clientSearchTerm.length < 2 ? "Ingresa al menos 2 caracteres para buscar" :
+                         "No se encontraron clientes."}
                       </CommandEmpty>
                       <CommandGroup>
-                        {filteredCasilleros.map((option) => (
+                        {clientSearchResults.map((client) => (
                           <CommandItem
-                            key={option.value}
-                            value={option.value}
-                            onSelect={(currentValue) => {
-                              handleInputChange("numeroCasillero", currentValue)
-                              setCasilleroOpen(false)
-                              setCasilleroSearch("")
-                            }}
+                            key={client.uid}
+                            value={client.displayName}
+                            onSelect={() => handleClientSelect(client)}
                             className="py-3 sm:py-2"
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                formData.numeroCasillero === option.value ? "opacity-100" : "opacity-0"
+                                selectedClient?.uid === client.uid ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            <span className="truncate">{option.label}</span>
+                            <span className="truncate">{client.displayName}</span>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -776,10 +843,24 @@ function PreRegistroContent() {
             {/* Número de Tracking - Required */}
             <div className="space-y-2">
               <Label htmlFor="numeroTracking" className="text-sm font-medium">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                  <span className="flex items-center gap-2">
-                    Número de Tracking <span className="text-red-500">*</span>
-                  </span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="flex items-center gap-2">
+                      Número de Tracking <span className="text-red-500">*</span>
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateRandomTrackingNumber}
+                    className="h-8 px-3 self-start sm:self-auto"
+                  >
+                    <Shuffle className="h-4 w-4 mr-2" />
+                    <span className="text-xs">Paquete sin número de tracking</span>
+                  </Button>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
                   <div className="flex items-center gap-2">
                     {scannerMode && (
                       <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full animate-pulse self-start sm:self-auto">
@@ -876,6 +957,7 @@ function PreRegistroContent() {
                   !formData.numeroTracking.trim() || 
                   !formData.numeroTarima.trim() ||
                   !formData.peso.trim() ||
+                  !formData.numeroCasillero.trim() ||
                   (batchSession?.isActive && batchSession.status === 'paused') ||
                   trackingSearch.isSearching
                 }

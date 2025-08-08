@@ -44,9 +44,15 @@ export interface CasilleroOption {
   label: string
 }
 
+export interface ClientSearchResult {
+  uid: number
+  displayName: string
+  label: string
+}
+
 // Base API URL - will use local .NET API
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? 'https://your-production-api.com/api' 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL 
+  ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api`
   : 'http://localhost:5286/api'
 
 // Utility function for API calls with error handling
@@ -208,6 +214,27 @@ export async function getCasilleros(): Promise<CasilleroOption[]> {
     return Array.isArray(response) ? response : []
   } catch (error) {
     console.error('Error fetching casilleros:', error)
+    return []
+  }
+}
+
+/**
+ * Search clients by name (minimum 2 characters)
+ */
+export async function searchClientsByName(searchTerm: string): Promise<ClientSearchResult[]> {
+  try {
+    if (!searchTerm || searchTerm.trim().length < 2) {
+      return []
+    }
+
+    const response = await apiCall<ClientSearchResult[]>(`/Preregistro/clients/search?q=${encodeURIComponent(searchTerm.trim())}`)
+    return Array.isArray(response) ? response.map(client => ({
+      uid: client.uid,
+      displayName: client.displayName,
+      label: client.label || client.displayName
+    })) : []
+  } catch (error) {
+    console.error('Error searching clients by name:', error)
     return []
   }
 }

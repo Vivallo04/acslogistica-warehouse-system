@@ -32,6 +32,7 @@ import {
 import { BatchModePanel } from "@/components/preregistro/BatchModePanel"
 import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { useToast } from "@/hooks/use-toast"
+import { TrackingSearchSkeleton } from "@/components/ui/loading"
 import * as Sentry from "@sentry/nextjs"
 
 interface PreRegistroForm {
@@ -336,16 +337,20 @@ function PreRegistroContent() {
         const response = await processPackage(packageData, existingPackage)
         
         if (response.success && response.data) {
+          // Use actual status from backend database
+          const actualStatus = response.data.finalStatus as ProcessedPackage['estado'] || 'Vuelo Asignado'
+          
           // Create processed package with real CI and data
           const newPackage: ProcessedPackage = {
             id: response.data.nid.toString(),
             numeroTracking: formData.numeroTracking,
             numeroCasillero: formData.numeroCasillero,
+            clientDisplayName: selectedClient?.displayName,
             contenido: formData.contenido,
             peso: formData.peso,
             numeroTarima: formData.numeroTarima,
             timestamp: new Date(),
-            estado: 'procesado',
+            estado: actualStatus,
             ci: response.data.ci_paquete,
             pdfUrl: response.data.pdfUrl
           }
@@ -376,13 +381,13 @@ function PreRegistroContent() {
           })
           
           const isUpdate = !!existingPackage
-          const actionText = isUpdate ? "actualizado a Vuelo Asignado" : "creado"
+          const statusText = actualStatus || 'procesado'
           
           toast({
-            title: `Paquete ${actionText} exitosamente`,
+            title: `Paquete procesado exitosamente`,
             description: batchSession?.isActive 
-              ? `CI: ${response.data.ci_paquete} - Lote: ${(batchSession.packagesScanned || 0) + 1} paquetes`
-              : `CI: ${response.data.ci_paquete} ${isUpdate ? 'mantenido' : 'generado'} para tracking ${formData.numeroTracking}`,
+              ? `Estado: ${statusText} - CI: ${response.data.ci_paquete} - Lote: ${(batchSession.packagesScanned || 0) + 1} paquetes`
+              : `Estado: ${statusText} - CI: ${response.data.ci_paquete} para tracking ${formData.numeroTracking}`,
             duration: 5000
           })
           
@@ -405,6 +410,22 @@ function PreRegistroContent() {
         }
       })
       
+      // Add failed package to session history for tracking
+      const failedPackage: ProcessedPackage = {
+        id: `error_${Date.now()}`,
+        numeroTracking: formData.numeroTracking,
+        numeroCasillero: formData.numeroCasillero,
+        clientDisplayName: selectedClient?.displayName,
+        contenido: formData.contenido,
+        peso: formData.peso,
+        numeroTarima: formData.numeroTarima,
+        timestamp: new Date(),
+        estado: 'error'
+        // No CI or PDF for failed packages
+      }
+      
+      setProcessedPackages(prev => [...prev, failedPackage])
+      
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       toast({
         variant: "destructive",
@@ -418,13 +439,13 @@ function PreRegistroContent() {
   }
 
   const resetForm = () => {
-    setFormData({
+    setFormData(prev => ({
       numeroTracking: "",
       numeroCasillero: "",
       contenido: "",
       peso: "",
-      numeroTarima: ""
-    })
+      numeroTarima: prev.numeroTarima // Preserve the tarima selection
+    }))
     setSelectedClient(null)
     setClientSearchTerm("")
   }
@@ -611,7 +632,7 @@ function PreRegistroContent() {
   const handleExportSession = () => {
     toast({
       title: "Sesión exportada",
-      description: "Archivo CSV descargado exitosamente",
+      description: "Archivo Excel descargado exitosamente",
     })
   }
 
@@ -858,10 +879,7 @@ function PreRegistroContent() {
                       </span>
                     )}
                     {trackingSearch.isSearching && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full self-start sm:self-auto">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-spin"></div>
-                        Buscando...
-                      </span>
+                      <TrackingSearchSkeleton />
                     )}
                     {trackingSearch.searchResults?.matchType === 'exact' && (
                       <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full self-start sm:self-auto">

@@ -27,6 +27,8 @@ export interface PreregistroResponse {
     ci_paquete: string
     nid: number
     pdfUrl?: string
+    finalStatus?: string
+    finalStatusId?: number
     package: PreregistroPackage
   }
   error?: string
@@ -174,6 +176,8 @@ export async function processPackage(
       errors?: string[]
       processedAt: string
       processingTimeSeconds: number
+      finalStatus?: string
+      finalStatusId?: number
     }>('/Preregistro/process', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -187,6 +191,8 @@ export async function processPackage(
         ci_paquete: response.ciNumber,
         nid: response.packageNid,
         pdfUrl: response.pdfUrl,
+        finalStatus: response.finalStatus,
+        finalStatusId: response.finalStatusId,
         package: {
           ...packageData,
           id: response.packageNid.toString(),

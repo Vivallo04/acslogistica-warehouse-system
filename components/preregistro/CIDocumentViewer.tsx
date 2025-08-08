@@ -6,10 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { 
-  ZoomIn, 
-  ZoomOut, 
   FileText, 
-  Download, 
   AlertCircle,
   CheckCircle2
 } from "lucide-react"
@@ -25,7 +22,6 @@ export function CIDocumentViewer({
   pdfUrl, 
   isLoading = false 
 }: CIDocumentViewerProps) {
-  const [zoom, setZoom] = useState(100)
   const [fileSize, setFileSize] = useState<string>('')
 
   // Calculate file size dynamically
@@ -42,20 +38,6 @@ export function CIDocumentViewer({
         .catch(() => setFileSize('Unknown'))
     }
   }, [pdfUrl])
-
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 25, 200))
-  }
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 25, 50))
-  }
-
-
-  const handleDownload = () => {
-    // Download PDF
-    console.log('Downloading PDF')
-  }
 
 
   return (
@@ -75,53 +57,6 @@ export function CIDocumentViewer({
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col space-y-3 sm:space-y-4 px-4 sm:px-6">
-        {/* Toolbar */}
-        <div className="bg-muted/50 rounded-lg p-2">
-          {/* Mobile: 2 rows, Desktop: 1 row */}
-          <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
-            {/* Zoom Controls */}
-            <div className="flex items-center justify-center sm:justify-start gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleZoomOut}
-                disabled={zoom <= 50}
-                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
-                title="Zoom Out"
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              
-              <div className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs font-medium bg-background rounded border min-w-[70px] sm:min-w-[60px] text-center">
-                {zoom}%
-              </div>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleZoomIn}
-                disabled={zoom >= 200}
-                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
-                title="Zoom In"
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Action Controls */}
-            <div className="flex items-center justify-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDownload}
-                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
-                title="Download"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
 
         {/* PDF Viewer Area */}
         <div className="flex-1 border rounded-lg overflow-hidden bg-muted/20 min-h-[400px] xl:min-h-0">
@@ -141,7 +76,6 @@ export function CIDocumentViewer({
               <iframe
                 src={pdfUrl}
                 className="w-full h-full border-0"
-                style={{ zoom: `${zoom}%` }}
                 title={`CI Document ${ciNumber || ''}`}
               />
             </div>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
+import { PaginationSkeleton } from "@/components/ui/loading"
 import { Plane, Edit, Eye, MoreVertical, RefreshCw, ArrowRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -1124,7 +1125,7 @@ function RecibidorMiamiContent() {
               <div className="text-sm text-muted-foreground flex items-center gap-2 justify-center sm:justify-start">
                 <span className="text-center sm:text-left">Página {fastSearchMeta.currentPage} de {Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)} • Búsqueda rápida</span>
                 {isPaginationLoading && (
-                  <div className="animate-spin h-4 w-4 border-2 border-accent-blue border-t-transparent rounded-full"></div>
+                  <PaginationSkeleton />
                 )}
               </div>
               

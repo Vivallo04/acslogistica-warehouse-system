@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { 
   Download, 
-  Trash2, 
   Clock, 
   Package,
   CheckCircle2,
@@ -20,11 +19,12 @@ export interface ProcessedPackage {
   id: string
   numeroTracking: string
   numeroCasillero: string
+  clientDisplayName?: string // Full client name for display
   contenido: string
   peso: string
   numeroTarima: string
   timestamp: Date
-  estado: 'creado' | 'actualizado' | 'error' | 'pendiente'
+  estado: 'Prealertado' | 'Vuelo Asignado' | 'En Aduana' | 'error' | 'pendiente'
   ci?: string
   pdfUrl?: string
 }
@@ -56,23 +56,31 @@ export function SessionHistory({
   onClearSession, 
   onExportSession 
 }: SessionHistoryProps) {
-  const successCount = packages.filter(pkg => pkg.estado === 'creado' || pkg.estado === 'actualizado').length
+  const processedCount = packages.filter(pkg => pkg.estado === 'Vuelo Asignado' || pkg.estado === 'En Aduana').length
+  const prealertadoCount = packages.filter(pkg => pkg.estado === 'Prealertado').length
   const errorCount = packages.filter(pkg => pkg.estado === 'error').length
   const pendingCount = packages.filter(pkg => pkg.estado === 'pendiente').length
 
   // Helper function to get status display info
   const getStatusInfo = (estado: ProcessedPackage['estado']) => {
     switch (estado) {
-      case 'creado':
+      case 'Prealertado':
         return {
-          label: 'creado',
+          label: 'Prealertado',
+          variant: 'secondary' as const,
+          className: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
+          icon: AlertCircle
+        }
+      case 'Vuelo Asignado':
+        return {
+          label: 'Vuelo Asignado',
           variant: 'default' as const,
           className: 'bg-green-100 text-green-800 hover:bg-green-200',
           icon: CheckCircle2
         }
-      case 'actualizado':
+      case 'En Aduana':
         return {
-          label: 'actualizado',
+          label: 'En Aduana',
           variant: 'default' as const,
           className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
           icon: CheckCircle2
@@ -88,44 +96,64 @@ export function SessionHistory({
         return {
           label: 'pendiente',
           variant: 'secondary' as const,
-          className: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
+          className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
           icon: AlertCircle
         }
     }
   }
 
-  const exportToCSV = () => {
+  const exportToExcel = () => {
     if (packages.length === 0) return
 
     try {
-      const headers = ['Tracking', 'CI', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
-      const csvContent = [
-        headers.join(','),
-        ...packages.map(pkg => [
-          `"${pkg.numeroTracking.replace(/"/g, '""')}"`,
-          `"${pkg.ci || '-'}"`,
-          `"${pkg.numeroCasillero.replace(/"/g, '""')}"`,
-          `"${pkg.contenido.replace(/"/g, '""')}"`,
-          `"${pkg.peso.replace(/"/g, '""')}"`,
-          `"${pkg.numeroTarima.replace(/"/g, '""')}"`,
-          `"${pkg.estado.replace(/"/g, '""')}"`,
-          `"${format(pkg.timestamp, 'HH:mm:ss', { locale: es })}"`
-        ].join(','))
-      ].join('\n')
+      // Dynamic import to avoid loading xlsx on page load
+      import('xlsx').then(XLSX => {
+        const headers = ['Tracking', 'CI', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
+        
+        // Create worksheet data with headers
+        const wsData = [
+          headers,
+          ...packages.map(pkg => [
+            pkg.numeroTracking,
+            pkg.ci || '-',
+            pkg.clientDisplayName || pkg.numeroCasillero, // Use full client name if available
+            pkg.contenido,
+            `${pkg.peso} kg`,
+            pkg.numeroTarima,
+            pkg.estado,
+            format(pkg.timestamp, 'HH:mm:ss', { locale: es })
+          ])
+        ]
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      const url = URL.createObjectURL(blob)
-      link.setAttribute('href', url)
-      link.setAttribute('download', `preregistro-session-${format(new Date(), 'yyyyMMdd-HHmmss')}.csv`)
-      link.style.visibility = 'hidden'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      onExportSession()
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.aoa_to_sheet(wsData)
+        
+        // Set column widths for better readability
+        ws['!cols'] = [
+          { width: 20 }, // Tracking
+          { width: 12 }, // CI
+          { width: 25 }, // Cliente
+          { width: 30 }, // Contenido
+          { width: 10 }, // Peso
+          { width: 15 }, // Tarima
+          { width: 15 }, // Estado
+          { width: 10 }  // Hora
+        ]
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Sesión de Preregistro')
+        
+        // Generate filename with timestamp
+        const filename = `preregistro-session-${format(new Date(), 'yyyyMMdd-HHmmss')}.xlsx`
+        
+        // Save the file
+        XLSX.writeFile(wb, filename)
+        
+        onExportSession()
+      })
     } catch (error) {
-      console.error('Error exporting CSV:', error)
+      console.error('Error exporting Excel:', error)
       // Could add toast notification here for error feedback
     }
   }
@@ -186,10 +214,12 @@ export function SessionHistory({
           {/* Stats Row - Mobile: separate row, Desktop: inline */}
           <div className="flex items-center justify-between sm:hidden">
             <div className="flex items-center gap-3 text-sm">
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>{successCount} exitosos</span>
-              </div>
+              {prealertadoCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <span>{prealertadoCount} prealertados</span>
+                </div>
+              )}
               {errorCount > 0 && (
                 <div className="flex items-center gap-1">
                   <AlertCircle className="w-4 h-4 text-red-500" />
@@ -198,7 +228,7 @@ export function SessionHistory({
               )}
               {pendingCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <AlertCircle className="w-4 h-4 text-yellow-500" />
                   <span>{pendingCount} pendientes</span>
                 </div>
               )}
@@ -208,10 +238,12 @@ export function SessionHistory({
           {/* Desktop Stats */}
           <div className="hidden sm:flex items-center gap-3">
             <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>{successCount} exitosos</span>
-              </div>
+              {prealertadoCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <span>{prealertadoCount} prealertados</span>
+                </div>
+              )}
               {errorCount > 0 && (
                 <div className="flex items-center gap-1">
                   <AlertCircle className="w-4 h-4 text-red-500" />
@@ -220,7 +252,7 @@ export function SessionHistory({
               )}
               {pendingCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <AlertCircle className="w-4 h-4 text-yellow-500" />
                   <span>{pendingCount} pendientes</span>
                 </div>
               )}
@@ -256,22 +288,12 @@ export function SessionHistory({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={exportToCSV}
+                onClick={exportToExcel}
                 className="flex items-center justify-center gap-2 h-10 sm:h-8 text-sm sm:text-xs"
               >
                 <Download className="w-4 h-4" />
-                <span className="sm:hidden">Exportar CSV</span>
+                <span className="sm:hidden">Exportar Excel</span>
                 <span className="hidden sm:inline">Exportar</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClearSession}
-                className="flex items-center justify-center gap-2 text-destructive hover:text-destructive h-10 sm:h-8 text-sm sm:text-xs"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className="sm:hidden">Limpiar Sesión</span>
-                <span className="hidden sm:inline">Limpiar</span>
               </Button>
             </div>
           </div>
@@ -304,7 +326,7 @@ export function SessionHistory({
                           {pkg.ci || '-'}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {pkg.numeroCasillero}
+                          {pkg.clientDisplayName || pkg.numeroCasillero}
                         </TableCell>
                         <TableCell className="text-sm">
                           <div className="max-w-[200px] truncate" title={pkg.contenido}>
@@ -317,20 +339,8 @@ export function SessionHistory({
                         <TableCell className="font-mono text-sm">
                           {pkg.numeroTarima}
                         </TableCell>
-                        <TableCell>
-                          {(() => {
-                            const statusInfo = getStatusInfo(pkg.estado)
-                            const Icon = statusInfo.icon
-                            return (
-                              <Badge 
-                                variant={statusInfo.variant}
-                                className={statusInfo.className}
-                              >
-                                <Icon className="w-3 h-3 mr-1" />
-                                {statusInfo.label}
-                              </Badge>
-                            )
-                          })()}
+                        <TableCell className="text-sm">
+                          {pkg.estado}
                         </TableCell>
                         <TableCell className="text-sm font-mono">
                           {format(pkg.timestamp, 'HH:mm:ss', { locale: es })}
@@ -357,29 +367,14 @@ export function SessionHistory({
                           </div>
                         )}
                       </div>
-                      <Badge 
-                        variant={pkg.estado === 'procesado' ? 'default' : 'secondary'}
-                        className={cn(
-                          "text-xs",
-                          pkg.estado === 'procesado' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-orange-100 text-orange-800'
-                        )}
-                      >
-                        {pkg.estado === 'procesado' ? (
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                        ) : (
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                        )}
-                        {pkg.estado}
-                      </Badge>
+                      <span className="text-xs text-muted-foreground">{pkg.estado}</span>
                     </div>
 
                     {/* Content Grid */}
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <div className="text-muted-foreground text-xs font-medium mb-1">Cliente</div>
-                        <div className="truncate">{pkg.numeroCasillero || '-'}</div>
+                        <div className="truncate">{pkg.clientDisplayName || pkg.numeroCasillero || '-'}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground text-xs font-medium mb-1">Peso</div>
@@ -413,8 +408,14 @@ export function SessionHistory({
                 <div className="flex items-center gap-4">
                   <span>Total de paquetes: <strong className="text-foreground">{packages.length}</strong></span>
                   <span>Procesados: <strong className="text-green-600">{processedCount}</strong></span>
+                  {prealertadoCount > 0 && (
+                    <span>Prealertados: <strong className="text-orange-600">{prealertadoCount}</strong></span>
+                  )}
+                  {errorCount > 0 && (
+                    <span>Errores: <strong className="text-red-600">{errorCount}</strong></span>
+                  )}
                   {pendingCount > 0 && (
-                    <span>Pendientes: <strong className="text-orange-600">{pendingCount}</strong></span>
+                    <span>Pendientes: <strong className="text-yellow-600">{pendingCount}</strong></span>
                   )}
                   {batchSession?.isActive && (
                     <span>Contador lote: <strong className="text-accent-blue">{batchSession.packagesScanned}</strong></span>

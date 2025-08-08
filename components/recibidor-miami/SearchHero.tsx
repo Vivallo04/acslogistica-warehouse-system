@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Search, Package, Clock, User, Hash, Building2, Plane, AlertTriangle } from "lucide-react"
 import { useFastSearch, type SearchResult, type PackageSearchResult } from "@/hooks/useFastSearch"
+import { InlineSearchSkeleton } from "@/components/ui/loading"
 
 interface SearchHeroProps {
   searchValue: string
@@ -178,9 +179,9 @@ export function SearchHero({
                     </span>
                   </div>
                 )}
-                {/* Loading Spinner */}
+                {/* Loading Skeleton */}
                 {(isLoading || isSearching) && (
-                  <div className="animate-spin h-5 w-5 border-2 border-accent-blue border-t-transparent rounded-full"></div>
+                  <InlineSearchSkeleton />
                 )}
               </div>
             </div>

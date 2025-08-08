@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { HelpCircle, Calendar, Plus, Wrench, Bug, Shield, Sparkles, ArrowUpCircle, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ModernLoader } from "@/components/ui/loading"
 
 interface ChangelogEntry {
   version: string
@@ -168,9 +169,8 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
         <ScrollArea className="flex-1 overflow-hidden">
           <div className="p-6 space-y-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full mb-4"></div>
-              <div className="text-sm text-muted-foreground">Cargando actualizaciones...</div>
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <ModernLoader />
             </div>
           ) : changelog.length === 0 ? (
             <div className="space-y-6">

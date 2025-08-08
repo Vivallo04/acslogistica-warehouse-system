@@ -20,6 +20,9 @@ interface ActionToolbarProps {
   onSettings: () => void
   autoSync: boolean
   onAutoSyncToggle: (enabled: boolean) => void
+  printQueueCount?: number
+  printQueueProcessing?: boolean
+  printersAvailable?: boolean
 }
 
 export function ActionToolbar({
@@ -29,7 +32,10 @@ export function ActionToolbar({
   onReports,
   onSettings,
   autoSync,
-  onAutoSyncToggle
+  onAutoSyncToggle,
+  printQueueCount = 0,
+  printQueueProcessing = false,
+  printersAvailable = false
 }: ActionToolbarProps) {
   return (
     <Card className="p-3 sm:p-4 bg-card/50 backdrop-blur-sm border-border/50">
@@ -60,13 +66,32 @@ export function ActionToolbar({
           <Button
             variant="outline"
             onClick={onPrintLabels}
-            disabled={true}
-            className="rounded-full border-2 border-muted text-muted-foreground hover:border-muted hover:text-muted-foreground text-sm h-11 sm:h-auto justify-center cursor-not-allowed"
+            disabled={false}
+            className={`rounded-full border-2 text-sm h-11 sm:h-auto justify-center relative ${
+              !printersAvailable
+                ? 'border-yellow-500 text-yellow-600 hover:border-yellow-600 hover:text-yellow-700' 
+                : printQueueProcessing 
+                ? 'border-blue-500 text-blue-600 hover:border-blue-600 hover:text-blue-700' 
+                : printQueueCount > 0
+                ? 'border-orange-500 text-orange-600 hover:border-orange-600 hover:text-orange-700'
+                : 'border-border text-foreground hover:border-accent hover:text-accent-foreground'
+            }`}
           >
-            <Printer className="w-4 h-4 sm:mr-1 md:mr-2" />
-            <span className="inline sm:hidden ml-2">Imprimir</span>
-            <span className="hidden sm:inline md:hidden ml-1">Imprimir</span>
-            <span className="hidden md:inline ml-2">Imprimir Etiquetas</span>
+            <Printer className={`w-4 h-4 sm:mr-1 md:mr-2 ${printQueueProcessing ? 'animate-pulse' : ''}`} />
+            <span className="inline sm:hidden ml-2">
+              {!printersAvailable ? 'Sin Impresoras' : printQueueProcessing ? 'Imprimiendo' : 'Imprimir'}
+            </span>
+            <span className="hidden sm:inline md:hidden ml-1">
+              {!printersAvailable ? 'Sin Impresoras' : printQueueProcessing ? 'Imprimiendo' : 'Imprimir'}
+            </span>
+            <span className="hidden md:inline ml-2">
+              {!printersAvailable ? 'Sin Impresoras' : printQueueProcessing ? 'Imprimiendo Etiquetas' : 'Gestionar Impresión'}
+            </span>
+            {printQueueCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {printQueueCount > 99 ? '99+' : printQueueCount}
+              </span>
+            )}
           </Button>
           
           <Button
@@ -84,8 +109,8 @@ export function ActionToolbar({
           <Button
             variant="outline"
             onClick={onSettings}
-            disabled={true}
-            className="col-span-2 sm:col-span-1 rounded-full border-2 border-muted text-muted-foreground hover:border-muted hover:text-muted-foreground text-sm h-11 sm:h-auto justify-center cursor-not-allowed"
+            disabled={false}
+            className="col-span-2 sm:col-span-1 rounded-full border-2 border-border text-foreground hover:border-accent hover:text-accent-foreground text-sm h-11 sm:h-auto justify-center"
           >
             <Settings className="w-4 h-4 sm:mr-1 md:mr-2" />
             <span className="inline sm:hidden ml-2">Config</span>

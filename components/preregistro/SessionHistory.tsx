@@ -14,6 +14,7 @@ import {
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 
 export interface ProcessedPackage {
   id: string
@@ -56,6 +57,7 @@ export function SessionHistory({
   onClearSession, 
   onExportSession 
 }: SessionHistoryProps) {
+  const { toast } = useToast()
   const processedCount = packages.filter(pkg => pkg.estado === 'Vuelo Asignado' || pkg.estado === 'En Aduana').length
   const prealertadoCount = packages.filter(pkg => pkg.estado === 'Prealertado').length
   const errorCount = packages.filter(pkg => pkg.estado === 'error').length
@@ -102,59 +104,113 @@ export function SessionHistory({
     }
   }
 
-  const exportToExcel = () => {
-    if (packages.length === 0) return
+  const exportToExcel = async () => {
+    if (packages.length === 0) {
+      toast({
+        title: "No hay datos para exportar",
+        description: "No hay paquetes en el historial de sesión para exportar a Excel.",
+        variant: "destructive"
+      })
+      return
+    }
 
     try {
-      // Dynamic import to avoid loading xlsx on page load
-      import('xlsx').then(XLSX => {
-        const headers = ['Tracking', 'CI', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
-        
-        // Create worksheet data with headers
-        const wsData = [
-          headers,
-          ...packages.map(pkg => [
-            pkg.numeroTracking,
-            pkg.ci || '-',
-            pkg.clientDisplayName || pkg.numeroCasillero, // Use full client name if available
-            pkg.contenido,
-            `${pkg.peso} kg`,
-            pkg.numeroTarima,
-            pkg.estado,
-            format(pkg.timestamp, 'HH:mm:ss', { locale: es })
-          ])
-        ]
-
-        // Create workbook and worksheet
-        const wb = XLSX.utils.book_new()
-        const ws = XLSX.utils.aoa_to_sheet(wsData)
-        
-        // Set column widths for better readability
-        ws['!cols'] = [
-          { width: 20 }, // Tracking
-          { width: 12 }, // CI
-          { width: 25 }, // Cliente
-          { width: 30 }, // Contenido
-          { width: 10 }, // Peso
-          { width: 15 }, // Tarima
-          { width: 15 }, // Estado
-          { width: 10 }  // Hora
-        ]
-        
-        // Add worksheet to workbook
-        XLSX.utils.book_append_sheet(wb, ws, 'Sesión de Preregistro')
-        
-        // Generate filename with timestamp
-        const filename = `preregistro-session-${format(new Date(), 'yyyyMMdd-HHmmss')}.xlsx`
-        
-        // Save the file
-        XLSX.writeFile(wb, filename)
-        
-        onExportSession()
+      // Show loading toast
+      toast({
+        title: "Exportando Excel...",
+        description: "Generando archivo de historial de sesión.",
       })
+
+      // Dynamic import to avoid loading xlsx on page load
+      const XLSX = await import('xlsx')
+      
+      const headers = ['Tracking', 'CI', 'Cliente', 'Contenido', 'Peso', 'Tarima', 'Estado', 'Hora']
+      
+      // Create worksheet data with headers
+      const wsData = [
+        headers,
+        ...packages.map(pkg => [
+          pkg.numeroTracking,
+          pkg.ci || '-',
+          pkg.clientDisplayName || pkg.numeroCasillero, // Use full client name if available
+          pkg.contenido,
+          `${pkg.peso} kg`,
+          pkg.numeroTarima,
+          pkg.estado,
+          format(pkg.timestamp, 'HH:mm:ss', { locale: es })
+        ])
+      ]
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+      
+      // Set column widths for better readability
+      ws['!cols'] = [
+        { width: 20 }, // Tracking
+        { width: 12 }, // CI
+        { width: 25 }, // Cliente
+        { width: 30 }, // Contenido
+        { width: 10 }, // Peso
+        { width: 15 }, // Tarima
+        { width: 15 }, // Estado
+        { width: 10 }  // Hora
+      ]
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Sesión de Preregistro')
+      
+      // Generate filename with timestamp
+      const filename = `preregistro-session-${format(new Date(), 'yyyyMMdd-HHmmss')}.xlsx`
+      
+      // Save the file with additional error handling
+      try {
+        XLSX.writeFile(wb, filename)
+      } catch (writeError) {
+        // Handle specific write errors
+        throw new Error(`write: No se pudo guardar el archivo. ${writeError instanceof Error ? writeError.message : 'Error desconocido'}`)
+      }
+      
+      // Show success toast
+      toast({
+        title: "✅ Excel exportado exitosamente",
+        description: `Archivo guardado como: ${filename}`,
+        variant: "default"
+      })
+      
+      onExportSession()
     } catch (error) {
       console.error('Error exporting Excel:', error)
-      // Could add toast notification here for error feedback
+      
+      // Show detailed error message based on error type
+      let errorMessage = "Error desconocido al generar el archivo Excel."
+      let errorTitle = "❌ Error al exportar Excel"
+      
+      if (error instanceof Error) {
+        if (error.message.includes('xlsx')) {
+          errorMessage = "Error al cargar la biblioteca de Excel. Verifica tu conexión a internet."
+        } else if (error.message.includes('write')) {
+          errorMessage = "No se pudo guardar el archivo. Verifica que tienes permisos de escritura y espacio suficiente en disco."
+        } else if (error.message.includes('memory') || error.message.includes('Memory')) {
+          errorMessage = "No hay suficiente memoria para generar el archivo Excel. Intenta con menos paquetes."
+        } else if (error.message.includes('Network')) {
+          errorMessage = "Error de conexión al cargar las librerías necesarias. Verifica tu conexión a internet."
+        } else if (error.message.includes('blocked') || error.message.includes('security')) {
+          errorMessage = "El navegador bloqueó la descarga del archivo. Verifica la configuración de descargas."
+        } else if (error.message.includes('quota') || error.message.includes('storage')) {
+          errorMessage = "No hay suficiente espacio de almacenamiento disponible."
+        } else {
+          errorMessage = `Error al generar Excel: ${error.message}`
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = `Error: ${error}`
+      }
+      
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive"
+      })
     }
   }
 

@@ -17,6 +17,8 @@ import { ActionToolbar } from "@/components/preregistro/ActionToolbar"
 import { CIDocumentViewer } from "@/components/preregistro/CIDocumentViewer"
 import { AIContentScanner } from "@/components/preregistro/AIContentScanner"
 import { SessionHistory, ProcessedPackage } from "@/components/preregistro/SessionHistory"
+import { PrintQueueDialog } from "@/components/preregistro/PrintQueueDialog"
+import { ConfigurationDialog } from "@/components/preregistro/ConfigurationDialog"
 import { 
   searchPackagesByTracking,
   processPackage,
@@ -33,6 +35,10 @@ import { BatchModePanel } from "@/components/preregistro/BatchModePanel"
 import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { useToast } from "@/hooks/use-toast"
 import { TrackingSearchSkeleton } from "@/components/ui/loading"
+import { usePrintQueue } from "@/hooks/usePrintQueue"
+import { printerDiscovery } from "@/lib/printer-discovery"
+import { PrintSettings, DEFAULT_PRINT_SETTINGS } from "@/lib/print-types"
+import { printService } from "@/lib/print-service"
 import * as Sentry from "@sentry/nextjs"
 
 interface PreRegistroForm {
@@ -92,6 +98,9 @@ export default function PreRegistroPage() {
 
 function PreRegistroContent() {
   const { toast } = useToast()
+  
+  // Print queue hook
+  const printQueue = usePrintQueue()
 
   // Refs for DOM manipulation
   const trackingInputRef = useRef<HTMLInputElement>(null)
@@ -118,6 +127,12 @@ function PreRegistroContent() {
   // Batch mode state
   const [batchSession, setBatchSession] = useState<BatchSession | null>(null)
   const [showBatchPanel, setShowBatchPanel] = useState(false)
+  
+  // Printer and queue management state
+  const [showPrintQueueDialog, setShowPrintQueueDialog] = useState(false)
+  const [showConfigurationDialog, setShowConfigurationDialog] = useState(false)
+  const [printersAvailable, setPrintersAvailable] = useState(false)
+  const [printSettings, setPrintSettings] = useState<PrintSettings>(DEFAULT_PRINT_SETTINGS)
   
   // Combobox state for client search
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false)
@@ -164,6 +179,14 @@ function PreRegistroContent() {
     
     loadCasilleros()
   }, [toast])
+
+  // Load print settings on component mount
+  useEffect(() => {
+    const stored = printService.getStoredSettings()
+    if (stored) {
+      setPrintSettings(stored)
+    }
+  }, [])
 
   // Debounced client search
   useEffect(() => {
@@ -561,12 +584,26 @@ function PreRegistroContent() {
   }
 
   const handlePrintLabels = useCallback(() => {
-    toast({
-      title: "Imprimir Etiquetas Deshabilitado",
-      description: "La función de imprimir etiquetas está temporalmente deshabilitada",
-      variant: "destructive"
-    })
-  }, [toast])
+    // Open print queue dialog
+    setShowPrintQueueDialog(true)
+  }, [])
+  
+  // Check printer availability on component mount
+  useEffect(() => {
+    const checkPrinters = async () => {
+      try {
+        const result = await printerDiscovery.discoverPrinters()
+        const hasActivePrinters = result.jsprintManagerAvailable && 
+          (result.localPrinters.length > 0 || result.networkPrinters.length > 0)
+        setPrintersAvailable(hasActivePrinters)
+      } catch (error) {
+        setPrintersAvailable(false)
+        console.warn('Printer discovery failed:', error)
+      }
+    }
+    
+    checkPrinters()
+  }, [])
 
   const handleReports = useCallback(() => {
     toast({
@@ -577,12 +614,9 @@ function PreRegistroContent() {
   }, [toast])
 
   const handleSettings = useCallback(() => {
-    toast({
-      title: "Configuración Deshabilitada",
-      description: "La función de configuración está temporalmente deshabilitada",
-      variant: "destructive"
-    })
-  }, [toast])
+    // Open configuration dialog with printer management
+    setShowConfigurationDialog(true)
+  }, [])
 
   const handleAutoSyncToggle = () => {
     // Auto-sync is temporarily disabled
@@ -692,6 +726,9 @@ function PreRegistroContent() {
         onSettings={handleSettings}
         autoSync={autoSync}
         onAutoSyncToggle={handleAutoSyncToggle}
+        printQueueCount={printQueue.getQueueStats().pending}
+        printQueueProcessing={printQueue.getQueueStats().isProcessing}
+        printersAvailable={printersAvailable}
       />
 
       {/* Responsive Layout - Mobile First */}
@@ -830,7 +867,7 @@ function PreRegistroContent() {
                   </div>
                   <AIContentScanner 
                     onContentGenerated={handleContentGenerated}
-                    disabled={!formData.numeroTracking}
+                    disabled={true}
                   />
                 </div>
               </Label>
@@ -1003,7 +1040,10 @@ function PreRegistroContent() {
             <CIDocumentViewer
               ciNumber={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.ci : undefined}
               pdfUrl={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.pdfUrl : undefined}
+              trackingNumber={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.numeroTracking : undefined}
               isLoading={isProcessing}
+              onAddToPrintQueue={printQueue.addJob}
+              printSettings={printSettings}
             />
           </div>
           
@@ -1028,6 +1068,26 @@ function PreRegistroContent() {
         batchSession={batchSession}
         onClearSession={handleClearSession}
         onExportSession={handleExportSession}
+      />
+
+      {/* Print Queue Dialog - Shows when clicking "Imprimir Etiquetas" */}
+      <PrintQueueDialog
+        open={showPrintQueueDialog}
+        onOpenChange={setShowPrintQueueDialog}
+        queue={printQueue.queue}
+        onAddJob={printQueue.addJob}
+        onRemoveJob={printQueue.removeJob}
+        onClearQueue={printQueue.clearQueue}
+        onUpdateJob={printQueue.updateJob}
+        isProcessing={printQueue.isProcessing}
+        onProcessingChange={printQueue.setIsProcessing}
+        onSettingsChange={setPrintSettings}
+      />
+
+      {/* Configuration Dialog - Shows when clicking "Configuración" */}
+      <ConfigurationDialog
+        open={showConfigurationDialog}
+        onOpenChange={setShowConfigurationDialog}
       />
     </div>
   )

@@ -10,9 +10,6 @@ import {
   ZoomOut, 
   FileText, 
   Download, 
-  RefreshCw, 
-  RotateCcw, 
-  RotateCw,
   AlertCircle,
   CheckCircle2
 } from "lucide-react"
@@ -29,7 +26,6 @@ export function CIDocumentViewer({
   isLoading = false 
 }: CIDocumentViewerProps) {
   const [zoom, setZoom] = useState(100)
-  const [rotation, setRotation] = useState(0)
   const [fileSize, setFileSize] = useState<string>('')
 
   // Calculate file size dynamically
@@ -55,18 +51,6 @@ export function CIDocumentViewer({
     setZoom(prev => Math.max(prev - 25, 50))
   }
 
-  const handleRotateLeft = () => {
-    setRotation(prev => prev - 90)
-  }
-
-  const handleRotateRight = () => {
-    setRotation(prev => prev + 90)
-  }
-
-  const handleRefresh = () => {
-    // Refresh PDF content
-    console.log('Refreshing PDF content')
-  }
 
   const handleDownload = () => {
     // Download PDF
@@ -75,7 +59,7 @@ export function CIDocumentViewer({
 
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col xl:h-full">
       <CardHeader className="pb-3 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -135,44 +119,12 @@ export function CIDocumentViewer({
               >
                 <Download className="h-4 w-4" />
               </Button>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleRefresh}
-                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
-                title="Refresh"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              
-              <div className="w-px h-6 bg-border mx-1" />
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleRotateLeft}
-                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
-                title="Rotate Left"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleRotateRight}
-                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
-                title="Rotate Right"
-              >
-                <RotateCw className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>
 
         {/* PDF Viewer Area */}
-        <div className="flex-1 border rounded-lg overflow-hidden bg-muted/20">
+        <div className="flex-1 border rounded-lg overflow-hidden bg-muted/20 min-h-[400px] xl:min-h-0">
           {isLoading ? (
             // Loading skeleton
             <div className="h-full p-4 space-y-4">
@@ -185,10 +137,7 @@ export function CIDocumentViewer({
             </div>
           ) : pdfUrl ? (
             // PDF iframe or custom PDF viewer
-            <div 
-              className="h-full w-full flex items-center justify-center relative"
-              style={{ transform: `rotate(${rotation}deg)` }}
-            >
+            <div className="h-full w-full flex items-center justify-center relative">
               <iframe
                 src={pdfUrl}
                 className="w-full h-full border-0"

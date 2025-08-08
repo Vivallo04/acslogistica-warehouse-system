@@ -674,7 +674,7 @@ function PreRegistroContent() {
       />
 
       {/* Responsive Layout - Mobile First */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 min-h-[60vh]">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 min-h-[60vh] xl:h-fit xl:items-stretch">
         {/* Package Information Form */}
         <Card className={cn(
           "flex flex-col h-fit transition-all duration-200",
@@ -980,12 +980,14 @@ function PreRegistroContent() {
         </Card>
 
         {/* Right Column: CI Document Viewer and Batch Panel */}
-        <div className="h-fit space-y-4 sm:space-y-6">
-          <CIDocumentViewer
-            ciNumber={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.ci : undefined}
-            pdfUrl={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.pdfUrl : undefined}
-            isLoading={isProcessing}
-          />
+        <div className="space-y-4 sm:space-y-6 xl:h-full xl:flex xl:flex-col">
+          <div className="xl:flex-1 xl:min-h-0">
+            <CIDocumentViewer
+              ciNumber={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.ci : undefined}
+              pdfUrl={processedPackages.length > 0 ? processedPackages[processedPackages.length - 1]?.pdfUrl : undefined}
+              isLoading={isProcessing}
+            />
+          </div>
           
           {/* Batch Mode Panel */}
           <BatchModePanel

@@ -1,14 +1,10 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { 
-  ChevronDown, 
-  ChevronUp, 
   Download, 
   Trash2, 
   Clock, 
@@ -28,7 +24,7 @@ export interface ProcessedPackage {
   peso: string
   numeroTarima: string
   timestamp: Date
-  estado: 'procesado' | 'pendiente'
+  estado: 'creado' | 'actualizado' | 'error' | 'pendiente'
   ci?: string
   pdfUrl?: string
 }
@@ -60,10 +56,43 @@ export function SessionHistory({
   onClearSession, 
   onExportSession 
 }: SessionHistoryProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-
-  const processedCount = packages.filter(pkg => pkg.estado === 'procesado').length
+  const successCount = packages.filter(pkg => pkg.estado === 'creado' || pkg.estado === 'actualizado').length
+  const errorCount = packages.filter(pkg => pkg.estado === 'error').length
   const pendingCount = packages.filter(pkg => pkg.estado === 'pendiente').length
+
+  // Helper function to get status display info
+  const getStatusInfo = (estado: ProcessedPackage['estado']) => {
+    switch (estado) {
+      case 'creado':
+        return {
+          label: 'creado',
+          variant: 'default' as const,
+          className: 'bg-green-100 text-green-800 hover:bg-green-200',
+          icon: CheckCircle2
+        }
+      case 'actualizado':
+        return {
+          label: 'actualizado',
+          variant: 'default' as const,
+          className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
+          icon: CheckCircle2
+        }
+      case 'error':
+        return {
+          label: 'error',
+          variant: 'destructive' as const,
+          className: 'bg-red-100 text-red-800 hover:bg-red-200',
+          icon: AlertCircle
+        }
+      case 'pendiente':
+        return {
+          label: 'pendiente',
+          variant: 'secondary' as const,
+          className: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
+          icon: AlertCircle
+        }
+    }
+  }
 
   const exportToCSV = () => {
     if (packages.length === 0) return
@@ -124,143 +153,135 @@ export function SessionHistory({
 
   return (
     <Card className="mt-6">
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors pb-4 sm:pb-6">
-            <div className="space-y-3 sm:space-y-0">
-              {/* Mobile: Stacked layout, Desktop: Horizontal */}
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-lg">
-                  <div className="flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    {batchSession?.isActive ? 'Sesión de Lote' : 'Historial de Sesión'}
-                  </div>
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <Badge variant="secondary" className="text-xs">
-                      {packages.length} paquete{packages.length !== 1 ? 's' : ''}
-                    </Badge>
-                    {batchSession?.isActive && (
-                      <Badge 
-                        variant={batchSession.status === 'active' ? 'default' : 'secondary'}
-                        className={cn(
-                          "text-xs",
-                          batchSession.status === 'active' 
-                            ? 'bg-green-600 animate-pulse' 
-                            : 'bg-orange-500'
-                        )}
-                      >
-                        {batchSession.status === 'active' ? '⚡ Activo' : '⏸️ Pausado'}
-                      </Badge>
+      <CardHeader className="pb-4 sm:pb-6">
+        <div className="space-y-3 sm:space-y-0">
+          {/* Mobile: Stacked layout, Desktop: Horizontal */}
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-lg">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                {batchSession?.isActive ? 'Sesión de Lote' : 'Historial de Sesión'}
+              </div>
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <Badge variant="secondary" className="text-xs">
+                  {packages.length} paquete{packages.length !== 1 ? 's' : ''}
+                </Badge>
+                {batchSession?.isActive && (
+                  <Badge 
+                    variant={batchSession.status === 'active' ? 'default' : 'secondary'}
+                    className={cn(
+                      "text-xs",
+                      batchSession.status === 'active' 
+                        ? 'bg-green-600 animate-pulse' 
+                        : 'bg-orange-500'
                     )}
-                  </div>
-                </CardTitle>
-                
-                {/* Expand/Collapse Icon */}
-                <div className="sm:hidden">
-                  {isExpanded ? (
-                    <ChevronUp className="w-5 h-5" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5" />
-                  )}
-                </div>
-              </div>
-
-              {/* Stats Row - Mobile: separate row, Desktop: inline */}
-              <div className="flex items-center justify-between sm:hidden">
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    <span>{processedCount} procesados</span>
-                  </div>
-                  {pendingCount > 0 && (
-                    <div className="flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4 text-orange-500" />
-                      <span>{pendingCount} pendientes</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Desktop Stats */}
-              <div className="hidden sm:flex items-center gap-3">
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    <span>{processedCount} procesados</span>
-                  </div>
-                  {pendingCount > 0 && (
-                    <div className="flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4 text-orange-500" />
-                      <span>{pendingCount} pendientes</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Expand/Collapse Icon */}
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
+                  >
+                    {batchSession.status === 'active' ? '⚡ Activo' : '⏸️ Pausado'}
+                  </Badge>
                 )}
               </div>
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
+            </CardTitle>
+          </div>
 
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            {/* Action Buttons */}
-            <div className="space-y-3 sm:space-y-0 mb-4 pb-4 border-b">
-              {/* Session Info */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-xs sm:text-sm">
-                      {batchSession?.isActive 
-                        ? `Lote iniciado: ${format(batchSession.startedAt, 'dd/MM/yyyy HH:mm', { locale: es })}`
-                        : `Sesión iniciada: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}`
-                      }
-                    </span>
-                  </div>
-                  {batchSession?.isActive && (
-                    <div className="flex items-center gap-2 text-accent-blue">
-                      <span className="font-medium text-xs sm:text-sm">ID: {batchSession.id.split('_')[1]}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportToCSV}
-                    className="flex items-center justify-center gap-2 h-10 sm:h-8 text-sm sm:text-xs"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="sm:hidden">Exportar CSV</span>
-                    <span className="hidden sm:inline">Exportar</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onClearSession}
-                    className="flex items-center justify-center gap-2 text-destructive hover:text-destructive h-10 sm:h-8 text-sm sm:text-xs"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="sm:hidden">Limpiar Sesión</span>
-                    <span className="hidden sm:inline">Limpiar</span>
-                  </Button>
-                </div>
+          {/* Stats Row - Mobile: separate row, Desktop: inline */}
+          <div className="flex items-center justify-between sm:hidden">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                <span>{successCount} exitosos</span>
               </div>
+              {errorCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <span>{errorCount} errores</span>
+                </div>
+              )}
+              {pendingCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <span>{pendingCount} pendientes</span>
+                </div>
+              )}
             </div>
+          </div>
 
-            {/* Packages Table - Desktop / Cards - Mobile */}
-            <div className="rounded-lg border">
-              {/* Desktop Table View */}
-              <div className="hidden md:block">
-                <Table>
+          {/* Desktop Stats */}
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                <span>{successCount} exitosos</span>
+              </div>
+              {errorCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <span>{errorCount} errores</span>
+                </div>
+              )}
+              {pendingCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <span>{pendingCount} pendientes</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pt-0">
+        {/* Action Buttons */}
+        <div className="space-y-3 sm:space-y-0 mb-4 pb-4 border-b">
+          {/* Session Info */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">
+                  {batchSession?.isActive 
+                    ? `Lote iniciado: ${format(batchSession.startedAt, 'dd/MM/yyyy HH:mm', { locale: es })}`
+                    : `Sesión iniciada: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}`
+                  }
+                </span>
+              </div>
+              {batchSession?.isActive && (
+                <div className="flex items-center gap-2 text-accent-blue">
+                  <span className="font-medium text-xs sm:text-sm">ID: {batchSession.id.split('_')[1]}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                className="flex items-center justify-center gap-2 h-10 sm:h-8 text-sm sm:text-xs"
+              >
+                <Download className="w-4 h-4" />
+                <span className="sm:hidden">Exportar CSV</span>
+                <span className="hidden sm:inline">Exportar</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClearSession}
+                className="flex items-center justify-center gap-2 text-destructive hover:text-destructive h-10 sm:h-8 text-sm sm:text-xs"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="sm:hidden">Limpiar Sesión</span>
+                <span className="hidden sm:inline">Limpiar</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Packages Table - Desktop / Cards - Mobile */}
+        <div className="rounded-lg border">
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[140px]">Tracking</TableHead>
@@ -297,21 +318,19 @@ export function SessionHistory({
                           {pkg.numeroTarima}
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={pkg.estado === 'procesado' ? 'default' : 'secondary'}
-                            className={
-                              pkg.estado === 'procesado' 
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-                            }
-                          >
-                            {pkg.estado === 'procesado' ? (
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                            ) : (
-                              <AlertCircle className="w-3 h-3 mr-1" />
-                            )}
-                            {pkg.estado}
-                          </Badge>
+                          {(() => {
+                            const statusInfo = getStatusInfo(pkg.estado)
+                            const Icon = statusInfo.icon
+                            return (
+                              <Badge 
+                                variant={statusInfo.variant}
+                                className={statusInfo.className}
+                              >
+                                <Icon className="w-3 h-3 mr-1" />
+                                {statusInfo.label}
+                              </Badge>
+                            )
+                          })()}
                         </TableCell>
                         <TableCell className="text-sm font-mono">
                           {format(pkg.timestamp, 'HH:mm:ss', { locale: es })}
@@ -414,8 +433,6 @@ export function SessionHistory({
               </div>
             </div>
           </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
     </Card>
   )
 }

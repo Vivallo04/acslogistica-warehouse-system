@@ -157,10 +157,10 @@ export async function processPackage(
     const payload = {
       packageNid: existingPackage?.nid || null, // null for new packages
       trackingNumber: packageData.numeroTracking,
-      peso: parseFloat(packageData.peso),
-      numeroTarima: packageData.numeroTarima,
-      numeroCasillero: packageData.numeroCasillero,
-      contenido: packageData.contenido || null,
+      weight: parseFloat(packageData.peso),
+      palletNumber: packageData.numeroTarima,
+      lockerNumber: packageData.numeroCasillero,
+      content: packageData.contenido || null,
       userId: 1, // TODO: Get from auth context
       processingStartTime: new Date().toISOString()
     }

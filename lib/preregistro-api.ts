@@ -294,6 +294,8 @@ export function validateTrackingNumber(trackingNumber: string): boolean {
 
 /**
  * Validate peso format and range
+ * Minimum: 0.0000001 kg (0.0001 grams)
+ * Maximum: 999.99 kg
  */
 export function validatePeso(peso: string): boolean {
   if (!peso || peso.trim() === '') {
@@ -301,5 +303,5 @@ export function validatePeso(peso: string): boolean {
   }
   
   const pesoNum = parseFloat(peso)
-  return !isNaN(pesoNum) && pesoNum > 0 && pesoNum <= 1000 // Max 1000kg
+  return !isNaN(pesoNum) && pesoNum >= 0.0000001 && pesoNum <= 999.99
 }

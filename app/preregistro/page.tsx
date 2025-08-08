@@ -309,7 +309,7 @@ function PreRegistroContent() {
       toast({
         variant: "destructive",
         title: "Peso inválido",
-        description: "Ingrese un peso válido mayor a 0"
+        description: "Ingrese un peso válido entre 0.0000001 kg (0.0001 gramos) y 999.99 kg"
       })
       return
     }
@@ -727,8 +727,9 @@ function PreRegistroContent() {
                   id="peso"
                   type="number"
                   inputMode="decimal"
-                  step="0.1"
-                  min="0"
+                  step="0.0000001"
+                  min="0.0000001"
+                  max="999.99"
                   value={formData.peso}
                   onChange={(e) => handleInputChange("peso", e.target.value)}
                   placeholder={

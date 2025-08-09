@@ -322,11 +322,11 @@ export class PrinterDiscoveryService {
     return {
       downloadUrl: 'https://www.neodynamic.com/downloads/jspm/jspm8-8.0.25.719-win.exe',
       instructions: [
-        '1. Click "Descargar JSPrintManager" to download the Windows installer',
-        '2. Run the downloaded jspm8-8.0.25.719-win.exe file as Administrator',
-        '3. Follow the installation wizard to complete setup',
-        '4. Start JSPrintManager service after installation',
-        '5. Refresh this page to enable advanced printing features'
+        '1. Haga clic en "Descargar JSPrintManager" para descargar el instalador de Windows',
+        '2. Ejecute el archivo descargado jspm8-8.0.25.719-win.exe como Administrador',
+        '3. Siga el asistente de instalación para completar la configuración',
+        '4. Inicie el servicio JSPrintManager después de la instalación',
+        '5. Actualice esta página para habilitar las funciones de impresión avanzadas'
       ],
       platforms: ['Windows', 'macOS', 'Linux', 'Raspberry Pi']
     }

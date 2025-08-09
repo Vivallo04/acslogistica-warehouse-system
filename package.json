@@ -49,6 +49,7 @@
     "embla-carousel-react": "8.5.1",
     "firebase": "^11.9.1",
     "input-otp": "1.4.1",
+    "jsprintmanager": "^8.0.0",
     "lucide-react": "^0.454.0",
     "mongodb": "^6.17.0",
     "mysql2": "^3.14.3",
@@ -66,6 +67,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -64,7 +64,7 @@ export default function LoginPage() {
               priority
             />
           </div>
-          <h2 className="text-3xl font-bold text-foreground">WareHouse</h2>
+          <h2 className="text-3xl font-bold text-foreground">Warehouse Management System</h2>
           <p className="mt-2 text-sm text-muted-foreground">ACS Logística</p>
         </div>
 

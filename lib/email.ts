@@ -123,7 +123,7 @@ class EmailService {
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
           
           <p style="color: #6b7280; font-size: 14px;">
-            Estos comentarios fueron enviados a través del sistema de comentarios del WareHouse ACS Logística.
+            Estos comentarios fueron enviados a través del sistema de comentarios del Warehouse Management System ACS Logística.
           </p>
         </div>
       `,
@@ -185,7 +185,7 @@ ${escapeHtml(feedback.message)}
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
           
           <p style="color: #6b7280; font-size: 14px;">
-            Esta incidencia fue reportada a través del sistema de seguimiento de incidencias del WareHouse ACS Logística.
+            Esta incidencia fue reportada a través del sistema de seguimiento de incidencias del Warehouse Management System ACS Logística.
           </p>
         </div>
       `,

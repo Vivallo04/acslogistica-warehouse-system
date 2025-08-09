@@ -145,7 +145,7 @@ export function ReportIssueDialog({ open, onOpenChange }: ReportIssueDialogProps
             Reportar Incidencia
           </DialogTitle>
           <DialogDescription>
-            Reporta errores, fallos o problemas técnicos que experimentes con el WareHouse.
+            Reporta errores, fallos o problemas técnicos que experimentes con el Warehouse Management System.
           </DialogDescription>
         </DialogHeader>
 

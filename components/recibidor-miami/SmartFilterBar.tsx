@@ -119,117 +119,100 @@ export function SmartFilterBar({
   return (
     <Card className="p-4 bg-card/50 backdrop-blur-sm border-border/50">
       <div className="space-y-4">
-        {/* Primary Filters Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Estado Filter */}
-          <div className="flex items-center gap-2">
-            <Select 
-              value={filters.estado} 
-              onValueChange={(value) => onFilterChange('estado', value)}
-            >
-              <SelectTrigger className={cn(
-                "rounded-full border-2 transition-all duration-200 min-w-[100px] sm:min-w-[120px] text-sm sm:text-base",
-                isEstadoActive 
-                  ? "border-accent-blue bg-accent-blue/5 text-accent-blue font-medium" 
-                  : "border-border hover:border-accent-blue/50"
-              )}>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <SelectValue placeholder="Estado" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="Prealertado">Prealertado</SelectItem>
-                <SelectItem value="Recibido">Recibido</SelectItem>
-                <SelectItem value="Procesando">Procesando</SelectItem>
-                <SelectItem value="Enviado">Enviado</SelectItem>
-                {/* Dynamic states from API */}
-                {availableStates.filter(state => !['Prealertado', 'Recibido', 'Procesando', 'Enviado'].includes(state)).map(state => (
-                  <SelectItem key={state} value={state}>{state}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Mobile: Vertical Layout, Desktop: Horizontal Layout */}
+        <div className="space-y-4 sm:space-y-0">
+          {/* Section Header for Mobile */}
+          <div className="flex items-center gap-2 sm:hidden">
+            <h3 className="text-sm font-medium text-muted-foreground">Filtros de búsqueda</h3>
+            <div className="flex-1 h-px bg-border"></div>
           </div>
 
-          {/* País Filter */}
-          <div className="flex items-center gap-2">
-            <Select 
-              value={filters.pais} 
-              onValueChange={(value) => onFilterChange('pais', value)}
-            >
-              <SelectTrigger className={cn(
-                "rounded-full border-2 transition-all duration-200 min-w-[100px] sm:min-w-[120px] text-sm sm:text-base",
-                isPaisActive 
-                  ? "border-accent-blue bg-accent-blue/5 text-accent-blue font-medium" 
-                  : "border-border hover:border-accent-blue/50"
-              )}>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <SelectValue placeholder="País" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los países</SelectItem>
-                {/* Dynamic countries from API with proper formatting */}
-                {availableCountries.map(country => (
-                  <SelectItem key={country} value={country}>{formatCountryName(country)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Date Range Filter */}
-          <Popover 
-            open={datePickerOpen === 'desde'} 
-            onOpenChange={(open) => setDatePickerOpen(open ? 'desde' : null)}
-          >
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "rounded-full border-2 transition-all duration-200 min-w-[120px] sm:min-w-[140px] text-sm sm:text-base",
-                  isDateActive 
+          {/* Primary Filters - Mobile: Column, Desktop: Row */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+            {/* Mobile Filters Section */}
+            <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2 sm:hidden">
+                <span>Filtros principales:</span>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              {/* Estado Filter */}
+              <Select 
+                value={filters.estado} 
+                onValueChange={(value) => onFilterChange('estado', value)}
+              >
+                <SelectTrigger className={cn(
+                  "rounded-full border-2 transition-all duration-200 h-12 sm:h-auto w-full sm:w-auto sm:min-w-[120px] text-base sm:text-sm lg:text-base",
+                  isEstadoActive 
                     ? "border-accent-blue bg-accent-blue/5 text-accent-blue font-medium" 
                     : "border-border hover:border-accent-blue/50"
-                )}
-              >
-                <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                <span className="hidden sm:inline">{isDateActive ? "Rango de fechas" : "Fechas"}</span>
-                <span className="sm:hidden">{isDateActive ? "Fechas" : "Fechas"}</span>
-                <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 ml-1.5 sm:ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <div className="p-6 space-y-6 min-w-[420px]">
-                {/* Header */}
-                <div className="text-center space-y-1">
-                  <div className="text-base font-semibold text-foreground">Seleccionar Rango de Fechas</div>
-                  <div className="text-sm text-muted-foreground">Elija la fecha de inicio y fin para filtrar los paquetes</div>
-                </div>
-                
-                {/* Current Selection Display */}
-                <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-lg p-4">
-                  <div className="text-xs font-medium text-accent-blue mb-3 text-center">RANGO SELECCIONADO</div>
-                  <div className="flex items-center justify-center gap-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-accent-blue" />
-                      <span className={filters.desde ? "text-foreground font-semibold" : "text-muted-foreground italic"}>
-                        {filters.desde ? format(filters.desde, "dd/MM/yyyy", { locale: es }) : "Fecha inicio"}
-                      </span>
-                    </div>
-                    <div className="text-accent-blue font-bold text-lg">→</div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-accent-blue" />
-                      <span className={filters.hasta ? "text-foreground font-semibold" : "text-muted-foreground italic"}>
-                        {filters.hasta ? format(filters.hasta, "dd/MM/yyyy", { locale: es }) : "Fecha fin"}
-                      </span>
-                    </div>
+                )}>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <SelectValue placeholder="Todos los estados" />
                   </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="Prealertado">Prealertado</SelectItem>
+                  <SelectItem value="Recibido en Miami">Recibido en Miami</SelectItem>
+                  <SelectItem value="Vuelo asignado">Vuelo asignado</SelectItem>
+                  <SelectItem value="En Aduana">En Aduana</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* País Filter */}
+              <Select 
+                value={filters.pais} 
+                onValueChange={(value) => onFilterChange('pais', value)}
+              >
+                <SelectTrigger className={cn(
+                  "rounded-full border-2 transition-all duration-200 h-12 sm:h-auto w-full sm:w-auto sm:min-w-[120px] text-base sm:text-sm lg:text-base",
+                  isPaisActive 
+                    ? "border-accent-blue bg-accent-blue/5 text-accent-blue font-medium" 
+                    : "border-border hover:border-accent-blue/50"
+                )}>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    <SelectValue placeholder="Todos los países" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los países</SelectItem>
+                  {/* Dynamic countries from API with proper formatting */}
+                  {availableCountries.map(country => (
+                    <SelectItem key={country} value={country}>{formatCountryName(country)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Date Range Filter */}
+              <Popover 
+                open={datePickerOpen === 'desde'} 
+                onOpenChange={(open) => setDatePickerOpen(open ? 'desde' : null)}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "rounded-full border-2 transition-all duration-200 h-12 sm:h-auto w-full sm:w-auto sm:min-w-[140px] text-base sm:text-sm lg:text-base justify-start sm:justify-center",
+                      isDateActive 
+                        ? "border-accent-blue bg-accent-blue/5 text-accent-blue font-medium" 
+                        : "border-border hover:border-accent-blue/50"
+                    )}
+                  >
+                    <CalendarDays className="w-4 h-4 mr-2" />
+                    <span>{isDateActive ? "Fechas seleccionadas" : "Fechas"}</span>
+                    <ChevronDown className="w-4 h-4 ml-auto sm:ml-2" />
+                  </Button>
+                </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <div className="p-4 space-y-3">
+                {/* Header */}
+                <div className="text-sm font-medium text-center text-muted-foreground">
+                  Seleccionar fechas
                 </div>
 
-                {/* Single Calendar for Range Selection */}
+                {/* Calendar for Range Selection */}
                 <div className="flex justify-center">
                   <CalendarComponent
                     mode="range"
@@ -246,7 +229,7 @@ export function SmartFilterBar({
                         onFilterChange('hasta', undefined)
                       }
                     }}
-                    className="rounded-lg border-2 border-accent-blue/20"
+                    className="rounded-lg border border-accent-blue/20"
                     classNames={{
                       day_selected: "bg-accent-blue text-white hover:bg-accent-blue/90",
                       day_today: "bg-accent-blue/10 text-accent-blue font-semibold",
@@ -261,9 +244,9 @@ export function SmartFilterBar({
                 </div>
 
                 {/* Quick Selection Buttons */}
-                <div className="space-y-3">
-                  <div className="text-sm font-medium text-muted-foreground text-center">Selección rápida:</div>
-                  <div className="flex flex-wrap gap-2 justify-center">
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground text-center">Selección rápida</div>
+                  <div className="flex gap-2 justify-center">
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -272,7 +255,7 @@ export function SmartFilterBar({
                         onFilterChange('desde', today)
                         onFilterChange('hasta', today)
                       }}
-                      className="text-xs hover:bg-accent-blue/10 hover:border-accent-blue/50"
+                      className="text-xs px-3 py-1 h-7 hover:bg-accent-blue/10 hover:border-accent-blue/50"
                     >
                       Hoy
                     </Button>
@@ -285,9 +268,9 @@ export function SmartFilterBar({
                         onFilterChange('desde', weekAgo)
                         onFilterChange('hasta', today)
                       }}
-                      className="text-xs hover:bg-accent-blue/10 hover:border-accent-blue/50"
+                      className="text-xs px-3 py-1 h-7 hover:bg-accent-blue/10 hover:border-accent-blue/50"
                     >
-                      Última semana
+                      Semana
                     </Button>
                     <Button 
                       size="sm" 
@@ -299,15 +282,15 @@ export function SmartFilterBar({
                         onFilterChange('desde', monthAgo)
                         onFilterChange('hasta', today)
                       }}
-                      className="text-xs hover:bg-accent-blue/10 hover:border-accent-blue/50"
+                      className="text-xs px-3 py-1 h-7 hover:bg-accent-blue/10 hover:border-accent-blue/50"
                     >
-                      Último mes
+                      Mes
                     </Button>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-2 border-t">
+                <div className="flex gap-2 pt-2 border-t">
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -316,61 +299,70 @@ export function SmartFilterBar({
                       onClearFilter('hasta')
                       setDatePickerOpen(null)
                     }}
-                    className="flex-1 hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive"
+                    className="flex-1 h-8 text-xs hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive"
                   >
-                    <X className="w-4 h-4 mr-2" />
+                    <X className="w-3 h-3 mr-1" />
                     Limpiar
                   </Button>
                   <Button 
                     size="sm" 
                     onClick={() => setDatePickerOpen(null)}
-                    className="flex-1 bg-accent-blue hover:bg-accent-blue/90 text-white"
+                    className="flex-1 h-8 text-xs bg-accent-blue hover:bg-accent-blue/90 text-white"
                   >
-                    <CalendarDays className="w-4 h-4 mr-2" />
-                    Aplicar Filtro
+                    Aplicar
                   </Button>
                 </div>
               </div>
             </PopoverContent>
           </Popover>
 
-          {/* More Filters Button */}
-          <Button
-            variant="outline"
-            onClick={onShowAdvanced}
-            className={cn(
-              "rounded-full border-2 transition-all duration-200 text-sm sm:text-base",
-              isAdvancedOpen 
-                ? "border-accent-blue bg-accent-blue/5 text-accent-blue" 
-                : "border-border hover:border-accent-blue/50"
-            )}
-          >
-            <Settings2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            <span className="hidden sm:inline">Más filtros</span>
-            <span className="sm:hidden">Más</span>
-            {activeFiltersCount > 0 && (
-              <Badge className="ml-1.5 sm:ml-2 bg-accent-blue text-white text-xs px-1.5 py-0.5 rounded-full">
-                {activeFiltersCount}
-              </Badge>
-            )}
-            <ChevronDown className={cn(
-              "w-3 h-3 sm:w-4 sm:h-4 ml-1.5 sm:ml-2 transition-transform duration-200",
-              isAdvancedOpen && "rotate-180"
-            )} />
-          </Button>
+              </div>
+            </div>
 
+            {/* Action Buttons - Mobile: Vertical, Desktop: Horizontal */}
+            <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:items-center sm:gap-3 sm:ml-auto">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2 sm:hidden">
+                <span>Acciones:</span>
+                <div className="flex-1 h-px bg-border"></div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+              {/* More Filters Button */}
+              <Button
+                variant="outline"
+                onClick={onShowAdvanced}
+                className={cn(
+                  "rounded-full border-2 transition-all duration-200 h-12 sm:h-auto w-full sm:w-auto text-base sm:text-sm lg:text-base justify-start sm:justify-center",
+                  isAdvancedOpen 
+                    ? "border-accent-blue bg-accent-blue/5 text-accent-blue" 
+                    : "border-border hover:border-accent-blue/50"
+                )}
+              >
+                <Settings2 className="w-4 h-4 mr-3 sm:mr-1.5 lg:mr-2" />
+                <span className="sm:hidden">Más filtros</span>
+                <span className="hidden sm:inline">Más filtros</span>
+                {activeFiltersCount > 0 && (
+                  <Badge className="ml-auto sm:ml-1.5 lg:ml-2 bg-accent-blue text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+                <ChevronDown className={cn(
+                  "w-4 h-4 ml-2 sm:ml-1.5 lg:ml-2 transition-transform duration-200",
+                  isAdvancedOpen && "rotate-180"
+                )} />
+              </Button>
+
+              {/* Refresh Button */}
+              <Button 
+                variant="outline" 
+                onClick={onRefresh}
+                className="rounded-full border-2 hover:border-accent-blue hover:bg-accent-blue/5 transition-all duration-200 h-12 sm:h-auto w-full sm:w-auto text-base sm:text-sm lg:text-base justify-start sm:justify-center"
+              >
+                <RefreshCw className="w-4 h-4 mr-3 sm:mr-1.5 lg:mr-2" />
+                <span>Actualizar</span>
+              </Button>
+              </div>
+            </div>
           </div>
-
-          {/* Refresh Button - Right Side */}
-          <Button 
-            variant="outline" 
-            onClick={onRefresh}
-            className="rounded-full border-2 hover:border-accent-blue hover:bg-accent-blue/5 transition-all duration-200 text-sm sm:text-base ml-auto"
-          >
-            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            <span className="hidden sm:inline">Actualizar</span>
-            <span className="sm:hidden">Actualizar</span>
-          </Button>
         </div>
 
         {/* Active Filter Chips */}

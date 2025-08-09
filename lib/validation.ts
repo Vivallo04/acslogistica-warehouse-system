@@ -46,9 +46,9 @@ export const PhoneSchema = z.string()
   .transform(str => str.trim())
 
 export const WeightSchema = z.number()
-  .positive('Weight must be positive')
-  .max(10000, 'Weight cannot exceed 10,000 units')
-  .transform(num => Math.round(num * 100) / 100) // Round to 2 decimal places
+  .min(0.0000001, 'Weight must be at least 0.0000001 kg (0.0001 grams)')
+  .max(999.99, 'Weight cannot exceed 999.99 kg')
+  .transform(num => Number(num.toFixed(6))) // Round to 6 decimal places for precision
 
 export const CurrencySchema = z.string()
   .length(3, 'Currency code must be 3 characters')

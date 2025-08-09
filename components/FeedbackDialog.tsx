@@ -165,7 +165,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
             Enviar Comentarios
           </DialogTitle>
           <DialogDescription>
-            Ayúdanos a mejorar el WareHouse ACS Logística compartiendo tus comentarios y sugerencias.
+            Ayúdanos a mejorar el Warehouse Management System ACS Logística compartiendo tus comentarios y sugerencias.
           </DialogDescription>
         </DialogHeader>
 

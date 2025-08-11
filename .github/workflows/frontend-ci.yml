@@ -3,40 +3,9 @@ name: Frontend CI (Next.js)
 on:
   push:
     branches: [ main, development, staging ]
-    paths:
-      - 'app/**'
-      - 'components/**'
-      - 'contexts/**'
-      - 'hooks/**'
-      - 'lib/**'
-      - 'public/**'
-      - 'styles/**'
-      - 'pages/**'
-      - 'next.config.*'
-      - 'package.json'
-      - 'yarn.lock'
-      - 'tsconfig.json'
-      - '.eslintrc.*'
-      - 'postcss.config.*'
-      - 'tailwind.config.*'
+
   pull_request:
     branches: [ main, development, staging ]
-    paths:
-      - 'app/**'
-      - 'components/**'
-      - 'contexts/**'
-      - 'hooks/**'
-      - 'lib/**'
-      - 'public/**'
-      - 'styles/**'
-      - 'pages/**'
-      - 'next.config.*'
-      - 'package.json'
-      - 'yarn.lock'
-      - 'tsconfig.json'
-      - '.eslintrc.*'
-      - 'postcss.config.*'
-      - 'tailwind.config.*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

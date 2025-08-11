@@ -7,6 +7,28 @@ y este proyecto se adhiere al [Versionado Semántico](https://semver.org/spec/v2
 
 ## [Sin liberar]
 
+## [0.3.1] - 2025-08-11
+
+### Agregado
+- Lógica de auto-enfoque inteligente en entrada de peso para mejorar flujo de trabajo
+- Detección automática de pesos con formato de báscula (4+ decimales)
+- Auto-enfoque en selector de cliente después de entrada válida de peso desde báscula
+
+### Cambiado
+- Instrucciones de instalación de JSPrintManager actualizadas al español
+- Manejo mejorado de entrada de peso con validación y lógica de enfoque automático
+- Flujo de trabajo optimizado para entrada de datos en preregistro de paquetes
+
+### Mejorado
+- Experiencia de usuario en el formulario de preregistro con navegación automática
+- Detección inteligente de entrada de peso desde báscula vs entrada manual
+- Interfaz de usuario más intuitiva con textos en español para instrucciones de impresión
+
+### Detalles Técnicos
+- Función helper `hasProperDecimals()` para detectar formato de peso de báscula
+- Handler mejorado `handleWeightInputChange` con lógica de auto-enfoque
+- Referencias de componentes optimizadas para mejor control de navegación automática
+
 ## [0.3.0] - 2025-08-08
 
 ### Agregado

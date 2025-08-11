@@ -86,6 +86,12 @@ const generatePalletOptions = () => {
   ]
 }
 
+// Helper function to detect if weight has proper decimal formatting from scale
+const hasProperDecimals = (weight: string): boolean => {
+  const decimalIndex = weight.indexOf('.')
+  return decimalIndex !== -1 && (weight.length - decimalIndex - 1) >= 4
+}
+
 export default function PreRegistroPage() {
   return (
     <ProtectedRoute>
@@ -106,6 +112,7 @@ function PreRegistroContent() {
   const trackingInputRef = useRef<HTMLInputElement>(null)
   const tarimaSelectRef = useRef<HTMLButtonElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const clientDropdownRef = useRef<HTMLButtonElement>(null)
 
   // Generate pallet options once per render
   const palletOptions = generatePalletOptions()
@@ -219,6 +226,20 @@ function PreRegistroContent() {
     }))
   }
 
+  // Enhanced weight input handler with auto-focus logic
+  const handleWeightInputChange = (value: string) => {
+    // Update form data first
+    handleInputChange("peso", value)
+    
+    // Check if weight is valid and appears to be from scale (has 4+ decimal places)
+    if (validatePeso(value) && hasProperDecimals(value)) {
+      // Auto-focus client dropdown after short delay
+      setTimeout(() => {
+        clientDropdownRef.current?.click()
+      }, 150)
+    }
+  }
+
   // Handle client selection
   const handleClientSelect = (client: ClientSearchResult) => {
     setSelectedClient(client)
@@ -228,6 +249,11 @@ function PreRegistroContent() {
     }))
     setClientDropdownOpen(false)
     setClientSearchTerm("")
+    
+    // Auto-focus tracking input after client selection
+    setTimeout(() => {
+      trackingInputRef.current?.focus()
+    }, 100)
   }
 
   // Handle tracking number input with scanner support and search
@@ -684,12 +710,23 @@ function PreRegistroContent() {
         return
       }
       
-      // Ctrl key combinations
-      if (event.ctrlKey) {
-        if (event.key === 's') {
+      // Enter key for form submission (global)
+      if (event.key === 'Enter' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+        // Check if we're in an input field that should handle Enter differently
+        const target = event.target as HTMLElement
+        const isTextArea = target.tagName === 'TEXTAREA'
+        const isCommandInput = target.closest('[cmdk-input]') !== null
+        
+        // Don't submit if we're in a textarea or command input
+        if (!isTextArea && !isCommandInput) {
           event.preventDefault()
           formRef.current?.requestSubmit()
-        } else if (event.key === 'r') {
+        }
+      }
+      
+      // Ctrl key combinations
+      if (event.ctrlKey) {
+        if (event.key === 'r') {
           event.preventDefault()
           resetForm()
           toast({
@@ -777,7 +814,7 @@ function PreRegistroContent() {
                   min="0.0000001"
                   max="999.99"
                   value={formData.peso}
-                  onChange={(e) => handleInputChange("peso", e.target.value)}
+                  onChange={(e) => handleWeightInputChange(e.target.value)}
                   placeholder={
                     batchSession?.isActive && batchSession.defaultValues.peso
                       ? "Valor predeterminado del lote"
@@ -801,7 +838,7 @@ function PreRegistroContent() {
               <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
                 <PopoverTrigger asChild>
                   <Button
-                    ref={tarimaSelectRef}
+                    ref={clientDropdownRef}
                     variant="outline"
                     role="combobox"
                     aria-expanded={clientDropdownOpen}
@@ -1015,7 +1052,7 @@ function PreRegistroContent() {
                         : 'Procesar'
                     }
                   </span>
-                  <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-white/20 rounded">Ctrl+S</kbd>
+                  <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-white/20 rounded">Enter</kbd>
                 </span>
               </Button>
               <Button 

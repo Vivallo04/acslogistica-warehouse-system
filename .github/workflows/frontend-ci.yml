@@ -1,0 +1,77 @@
+name: Frontend CI (Next.js)
+
+on:
+  push:
+    branches: [ main, development, staging ]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'contexts/**'
+      - 'hooks/**'
+      - 'lib/**'
+      - 'public/**'
+      - 'styles/**'
+      - 'pages/**'
+      - 'next.config.*'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'tsconfig.json'
+      - '.eslintrc.*'
+      - 'postcss.config.*'
+      - 'tailwind.config.*'
+  pull_request:
+    branches: [ main, development, staging ]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'contexts/**'
+      - 'hooks/**'
+      - 'lib/**'
+      - 'public/**'
+      - 'styles/**'
+      - 'pages/**'
+      - 'next.config.*'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'tsconfig.json'
+      - '.eslintrc.*'
+      - 'postcss.config.*'
+      - 'tailwind.config.*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-lint-typecheck:
+    name: Build, Lint, Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      CI: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: yarn build

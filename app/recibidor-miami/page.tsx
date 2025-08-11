@@ -11,7 +11,17 @@ import { PaginationSkeleton } from "@/components/ui/loading"
 import { Plane, Edit, Eye, MoreVertical, RefreshCw, ArrowRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { bulkUpdatePackageStatus, filterUpdatablePackages, formatStatusUpdateMessage, STATUS_MAPPING } from "@/lib/recibidor-api"
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog"
+import { bulkUpdatePackageStatus, filterUpdatablePackages, formatStatusUpdateMessage, STATUS_MAPPING, PackageStatusInfo } from "@/lib/recibidor-api"
 import { SearchHero } from "@/components/recibidor-miami/SearchHero"
 import { SmartFilterBar } from "@/components/recibidor-miami/SmartFilterBar"
 import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
@@ -97,6 +107,13 @@ function RecibidorMiamiContent() {
   const [isPaginationLoading, setIsPaginationLoading] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [isStatusUpdating, setIsStatusUpdating] = useState(false)
+  
+  // Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [confirmationData, setConfirmationData] = useState<{
+    count: number
+    packages: PackageStatusInfo[]
+  } | null>(null)
   
   // Filter state
   const [filters, setFilters] = useState<PackageFilters>({
@@ -769,19 +786,25 @@ function RecibidorMiamiContent() {
       return
     }
 
-    // Show confirmation
-    const confirmMessage = `¿Confirmas actualizar ${updatablePackages.length} paquete${updatablePackages.length !== 1 ? 's' : ''} de 'Vuelo Asignado' a 'En Aduana'?`
-    
-    if (!window.confirm(confirmMessage)) {
-      return
-    }
+    // Show confirmation dialog
+    setConfirmationData({
+      count: updatablePackages.length,
+      packages: updatablePackages
+    })
+    setShowConfirmDialog(true)
+  }
 
+  // Handle confirmed status update
+  const handleConfirmStatusUpdate = async () => {
+    if (!confirmationData) return
+
+    setShowConfirmDialog(false)
     setIsStatusUpdating(true)
 
     try {
       // Call the API to update package status
       const response = await bulkUpdatePackageStatus(
-        updatablePackages.map(pkg => pkg.nid)
+        confirmationData.packages.map(pkg => pkg.nid)
       )
 
       if (response.success && response.data) {
@@ -811,7 +834,14 @@ function RecibidorMiamiContent() {
       })
     } finally {
       setIsStatusUpdating(false)
+      setConfirmationData(null)
     }
+  }
+
+  // Handle dialog cancel
+  const handleCancelStatusUpdate = () => {
+    setShowConfirmDialog(false)
+    setConfirmationData(null)
   }
 
   // Get count of packages that can be status updated
@@ -1005,16 +1035,18 @@ function RecibidorMiamiContent() {
                     <DropdownMenuItem 
                       onClick={handleBulkStatusUpdate}
                       disabled={isStatusUpdating || getUpdatablePackagesCount() === 0}
-                      className="flex items-center gap-2 py-3"
+                      className="px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50"
                     >
-                      <div className="flex items-center gap-2 flex-1">
-                        <ArrowRight className="w-4 h-4 text-blue-600" />
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium">Actualizar estado</span>
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center mr-3">
+                          <ArrowRight className="h-4 w-4 text-accent-blue" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Actualizar estado</span>
                           <span className="text-xs text-muted-foreground">
                             Vuelo Asignado → En Aduana
                           </span>
-                          <span className="text-xs text-blue-600">
+                          <span className="text-xs text-accent-blue font-semibold">
                             {getUpdatablePackagesCount()} paquete{getUpdatablePackagesCount() !== 1 ? 's' : ''} elegible{getUpdatablePackagesCount() !== 1 ? 's' : ''}
                           </span>
                         </div>
@@ -1103,14 +1135,24 @@ function RecibidorMiamiContent() {
                       <TableCell>{pkg.peso}</TableCell>
                       <TableCell>{pkg.estado}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Acciones</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver Detalles
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1429,6 +1471,55 @@ function RecibidorMiamiContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Status Update Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="sm:max-w-[425px] mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-semibold text-center sm:text-left text-accent-blue">
+              Confirmar Actualización de Estado
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center sm:text-left">
+              {confirmationData && (
+                <>
+                  ¿Confirmas actualizar <span className="font-medium">{confirmationData.count} paquete{confirmationData.count !== 1 ? 's' : ''}</span> de <span className="font-medium text-accent-blue">&lsquo;Vuelo Asignado&rsquo;</span> a <span className="font-medium text-emerald-600">&lsquo;En Aduana&rsquo;</span>?
+                  <br />
+                  <br />
+                  <span className="text-sm text-muted-foreground">
+                    Esta acción no se puede deshacer. Los paquetes cambiarán su estado en el sistema.
+                  </span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
+            <AlertDialogCancel 
+              onClick={handleCancelStatusUpdate}
+              disabled={isStatusUpdating}
+              className="rounded-full w-full sm:w-auto"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmStatusUpdate}
+              disabled={isStatusUpdating}
+              className="rounded-full w-full sm:w-auto bg-accent-blue hover:bg-accent-blue/90 text-white"
+            >
+              {isStatusUpdating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Confirmar Actualización
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

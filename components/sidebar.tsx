@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
@@ -41,7 +41,11 @@ export function Sidebar() {
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false)
   const [showIssueDialog, setShowIssueDialog] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [hasNewUpdates, setHasNewUpdates] = useState(false)
 
+  const handleNotificationUpdate = useCallback((hasUpdates: boolean) => {
+    setHasNewUpdates(hasUpdates)
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -169,19 +173,24 @@ export function Sidebar() {
       <div className={cn("px-3 py-4 space-y-3", isCollapsed && "items-center")}>
         <ThemeToggle showText={!isCollapsed} />
         
-        <WhatsNewDialog>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "rounded-full gap-2 text-muted-foreground hover:text-foreground",
-              isCollapsed ? "w-10 h-10 p-0 justify-center" : "w-full justify-start"
+        <WhatsNewDialog onNotificationUpdate={handleNotificationUpdate}>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "rounded-full gap-2 text-muted-foreground hover:text-foreground",
+                isCollapsed ? "w-10 h-10 p-0 justify-center" : "w-full justify-start"
+              )}
+              title={isCollapsed ? "¿Qué hay de nuevo?" : undefined}
+            >
+              <HelpCircle className="w-4 h-4" />
+              {!isCollapsed && <span className="text-sm">¿Qué hay de nuevo?</span>}
+            </Button>
+            {hasNewUpdates && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent-blue rounded-full" />
             )}
-            title={isCollapsed ? "¿Qué hay de nuevo?" : undefined}
-          >
-            <HelpCircle className="w-4 h-4" />
-            {!isCollapsed && <span className="text-sm">¿Qué hay de nuevo?</span>}
-          </Button>
+          </div>
         </WhatsNewDialog>
       </div>
 

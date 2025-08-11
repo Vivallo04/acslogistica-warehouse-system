@@ -1,95 +1,95 @@
-# Changelog
+# ¿Qué hay de nuevo?
 
-Todas las mejoras notables de este proyecto serán documentadas en este archivo.
+Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
-El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.3.3] - 11 de agosto de 2025
 
-## [1.1.0] - 2025-08-07
+### ✨ Mejoras
+- **Sistema de notificaciones mejorado**: Ahora verás una pequeña marca azul cuando hay nuevas funciones disponibles
+- **Interfaz más sutil**: Los indicadores visuales son ahora más elegantes y menos intrusivos
+- **Mejor experiencia visual**: El sistema usa colores más consistentes en todos los elementos
 
-### Agregado
-- **Actualización masiva de paquetes** en Recibidor de Miami
-  - Selecciona múltiples paquetes y cambia su estado de una vez
-  - Cambiar paquetes de "Vuelo Asignado" a "En Aduana" automáticamente  
-  - Botón "Acciones" con opciones para operaciones grupales
-  - Solo se actualizan paquetes que tienen el estado correcto
-- **Generación automática de documentos CI**
-  - Los paquetes procesados generan automáticamente su documento CI
-  - Descarga directa de PDFs desde el sistema
-  - Integración completa con el servicio de impresión
-- **Historial de sesión mejorado**
-  - Todos los paquetes procesados se guardan automáticamente en el historial
-  - Ver detalles completos de cada paquete registrado
-  - Exportar historial de trabajo a archivo CSV
+## [0.3.2] - 11 de agosto de 2025
 
-### Mejorado  
-- **Experiencia en Recibidor de Miami** más eficiente
-  - Interfaz más clara para seleccionar múltiples paquetes
-  - Confirmación antes de realizar cambios masivos
-  - Contador que muestra cuántos paquetes se pueden actualizar
-- **Mensajes de error más claros**
-  - Explicaciones específicas cuando algo no se puede procesar
-  - Información detallada sobre paquetes que no se pudieron actualizar
-  - Recuperación automática si solo algunos paquetes fallan
+### 🆕 Nuevas funciones
+- **Confirmaciones más claras**: Ahora cuando cambias el estado de paquetes, aparece una ventana de confirmación más fácil de usar en lugar del mensaje simple del navegador
+- **Mejor experiencia en móviles**: Todos los mensajes de confirmación se ven perfecto tanto en computadoras como en celulares
+- **Colores más consistentes**: Todos los botones y ventanas ahora usan los mismos colores del sistema para una experiencia más unificada
 
-### Removido
-- **Funciones temporalmente deshabilitadas** por mantenimiento del sistema
-  - Modo de procesamiento por lotes (Tecla F3)
-  - Escaneo rápido de códigos (Tecla F2)  
-  - Impresión de etiquetas (Tecla F4)
-  - Generación de reportes (Tecla F5)
-  - Panel de configuración
-  - Sincronización automática de datos
+### ✨ Mejoras
+- **Navegación más intuitiva**: Los diálogos y ventanas son más fáciles de usar y navegar
+- **Mejor rendimiento**: Las ventanas cargan más rápido y responden mejor
+- **Confirmaciones más seguras**: Antes de hacer cambios importantes, el sistema te pregunta de manera más clara
 
-### Corregido
-- **Botones ahora muestran texto** correctamente en pantallas pequeñas y grandes
-- **Teclas de función F2-F6** completamente desactivadas durante mantenimiento
-- **Interfaz más consistente** para elementos que están temporalmente deshabilitados
-- **Mejor rendimiento** al cargar y mostrar información de paquetes
+## [0.3.1] - 11 de agosto de 2025
 
-## [1.0.2] - 2025-08-05
+### 🆕 Nuevas funciones  
+- **Navegación automática inteligente**: Cuando usas la báscula para pesar paquetes, el sistema automáticamente te lleva al siguiente campo para que no tengas que hacer clic
+- **Detección de báscula**: El sistema reconoce cuando el peso viene de una báscula profesional y te ayuda a navegar más rápido
+- **Instrucciones en español**: Todas las instrucciones de impresión están ahora completamente en español
 
-### Agregado
-- **Botón "What's New"** en la barra lateral para mostrar actualizaciones de versiones
-- **Campo Peso obligatorio** en el formulario de pre-registro
-- **Nuevo orden de campos** en pre-registro: Peso, Casillero, Contenido, Tracking, Tarima
+### ✨ Mejoras
+- **Entrada de datos más rápida**: El formulario de pre-registro es más rápido de llenar
+- **Mejor flujo de trabajo**: Los campos se enfocan automáticamente para acelerar tu trabajo
+- **Interfaz más intuitiva**: Todo está diseñado para ser más fácil de entender y usar
 
-### Mejorado
-- **Interfaz de usuario** más intuitiva en el pre-registro
-- **Validación mejorada** de formularios
-- **Experiencia de usuario** optimizada
+## [0.3.0] - 8 de agosto de 2025  
 
-## [1.0.1] - 2025-01-07
+### 🆕 Nuevas funciones
+- **Control de cola de impresión**: Ahora puedes decidir si los documentos se agregan automáticamente a la cola de impresión o si prefieres hacerlo manualmente
+- **Configuración personalizable**: Puedes activar o desactivar la impresión automática según tus preferencias
+- **Botones más modernos**: Todos los botones tienen un diseño más redondeado y moderno
 
-### Corregido
-- **Búsqueda debounced mejorada** con mejor rendimiento y UX
-- **Problema de re-renderizado infinito** en filtros de búsqueda
-- **Carga inicial** ahora muestra paquetes de los últimos 45 días
-- **Filtros avanzados** con mejor funcionalidad de tarima y cliente
+### ✨ Mejoras  
+- **Mejor indicación visual**: Cuando la impresión automática está desactivada, te aparece una etiqueta que dice "Manual"
+- **Menos interrupciones**: Eliminamos las notificaciones molestas que aparecían al abrir los diálogos de configuración
+- **Control mejorado**: La impresión automática ahora funciona solo cuando tú lo decides
 
-### Mejorado
-- **Timeout de búsqueda** aumentado a 800ms para mejor experiencia
-- **Indicadores de carga** más claros durante búsquedas
+### 🔧 Correcciones
+- **Sin notificaciones no deseadas**: Ya no aparecen mensajes innecesarios sobre impresoras cuando abres la configuración
+- **Mejor control de impresión**: La cola de impresión funciona correctamente según tu configuración
 
-## [1.0.0] - 2025-01-01
+## [0.2.0] - 7 de agosto de 2025
 
-### Agregado
-- **Sistema de gestión de almacén (WMS)** inicial
-- **Módulo Pre-Registro** para registro rápido de paquetes
-- **Módulo Recibidor de Miami** para gestión de paquetes
-- **Autenticación** con roles de usuario
-- **Integración** con base de datos Drupal existente
-- **Sistema de roles** (super_admin, manager, pending)
-- **Filtros avanzados** y búsqueda
-- **Modo batch** para procesamiento masivo
-- **Escaneo de códigos de barras**
+### 🆕 Nuevas funciones
+- **Sistema de impresión profesional**: Integración completa con JSPrintManager para imprimir documentos de manera profesional
+- **Detección automática de impresoras**: El sistema encuentra automáticamente todas las impresoras disponibles en tu red
+- **Cola de impresión avanzada**: Puedes ver el estado de todos tus documentos en cola y manejarlos individualmente
+- **Configuración por pestañas**: Interfaz organizada con pestañas para configurar diferentes aspectos del sistema
+- **Descarga directa**: Puedes descargar e instalar JSPrintManager directamente desde la aplicación
+
+### ✨ Mejoras
+- **Interfaz reorganizada**: Los diálogos de impresora están mejor organizados y son más fáciles de usar
+- **Configuración centralizada**: Todas las opciones de impresora están en un solo lugar
+- **Cola visible solo cuando necesites**: La cola de impresión se muestra únicamente cuando haces clic en el botón correspondiente
+
+## [0.1.0] - 6 de agosto de 2025
+
+### 🆕 Sistema inicial
+- **Sistema de Gestión de Almacén (WMS)**: Lanzamiento inicial del sistema completo
+- **Pre-registro de paquetes**: Módulo para registrar paquetes de manera rápida y eficiente
+- **Recibidor de Miami**: Módulo especializado para gestionar paquetes que llegan de Miami
+- **Sistema de usuarios**: Control de acceso con diferentes niveles de permisos
+- **Integración con base de datos**: Conexión completa con el sistema existente
+- **Documentos CI**: Generación automática de documentos de identificación de paquetes
+
+### 🔧 Características principales
+- **Escaneo de códigos de barras**: Soporte completo para lectores de códigos
+- **Validación inteligente**: Prevención de números de seguimiento duplicados
+- **Seguimiento completo**: Control del estado de paquetes en todo el proceso
+- **Procesamiento por lotes**: Capacidad de procesar múltiples paquetes a la vez
+- **Registro en tiempo real**: Toda la información se guarda instantáneamente
 
 ---
 
-## Tipos de cambios
-- **Agregado** para nuevas funcionalidades
-- **Cambiado** para cambios en funcionalidades existentes
-- **Obsoleto** para funcionalidades que serán removidas pronto
-- **Removido** para funcionalidades removidas
-- **Corregido** para correcciones de bugs
-- **Seguridad** para vulnerabilidades
+## Símbolos utilizados
+- 🆕 **Nuevas funciones**: Características completamente nuevas
+- ✨ **Mejoras**: Funciones existentes que funcionan mejor  
+- 🔧 **Correcciones**: Problemas que fueron solucionados
+- ❌ **Removido**: Funciones que ya no están disponibles
+
+## Sobre las versiones
+- **0.x.x**: El sistema está en desarrollo y pruebas
+- **1.0.0**: Primera versión completamente estable (próximamente)
+
+*Estamos trabajando constantemente para mejorar tu experiencia. ¡Gracias por usar el sistema!*

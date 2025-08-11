@@ -1,13 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { HelpCircle, Calendar, Plus, Wrench, Bug, Shield, Sparkles, ArrowUpCircle, Settings } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { HelpCircle, Plus, Bug, Shield, Sparkles, ArrowUpCircle, Settings } from "lucide-react"
 import { ModernLoader } from "@/components/ui/loading"
 
 interface ChangelogEntry {
@@ -21,12 +18,68 @@ interface ChangelogEntry {
 
 interface WhatsNewDialogProps {
   children: React.ReactNode
+  onNotificationUpdate?: (hasNewUpdates: boolean) => void
 }
 
-export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
+export function WhatsNewDialog({ children, onNotificationUpdate }: WhatsNewDialogProps) {
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [hasNewUpdates, setHasNewUpdates] = useState(false)
+
+  // localStorage functions for version tracking
+  const getLastSeenVersion = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSeenChangelogVersion') || '0.0.0'
+    }
+    return '0.0.0'
+  }, [])
+
+  const setLastSeenVersion = useCallback((version: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lastSeenChangelogVersion', version)
+    }
+  }, [])
+
+  const compareVersions = useCallback((version1: string, version2: string) => {
+    const v1parts = version1.split('.').map(n => parseInt(n, 10))
+    const v2parts = version2.split('.').map(n => parseInt(n, 10))
+    
+    for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+      const v1part = v1parts[i] || 0
+      const v2part = v2parts[i] || 0
+      
+      if (v1part > v2part) return 1
+      if (v1part < v2part) return -1
+    }
+    return 0
+  }, [])
+
+  // Check for new updates on component mount
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const response = await fetch('/CHANGELOG.md')
+        if (response.ok) {
+          const text = await response.text()
+          const parsed = parseChangelog(text)
+          
+          if (parsed.length > 0) {
+            const latestVersion = parsed[0].version
+            const lastSeenVersion = getLastSeenVersion()
+            const hasUpdates = compareVersions(latestVersion, lastSeenVersion) > 0
+            
+            setHasNewUpdates(hasUpdates)
+            onNotificationUpdate?.(hasUpdates)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for updates:', error)
+      }
+    }
+
+    checkForUpdates()
+  }, [getLastSeenVersion, compareVersions, onNotificationUpdate])
 
   useEffect(() => {
     const loadChangelog = async () => {
@@ -40,6 +93,14 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
         const parsed = parseChangelog(text)
         console.log('Parsed changelog entries:', parsed.length)
         setChangelog(parsed)
+        
+        // Mark latest version as seen when dialog is opened
+        if (parsed.length > 0) {
+          const latestVersion = parsed[0].version
+          setLastSeenVersion(latestVersion)
+          setHasNewUpdates(false)
+          onNotificationUpdate?.(false)
+        }
       } catch (error) {
         console.error('Error loading changelog:', error)
       } finally {
@@ -50,7 +111,7 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
     if (open) {
       loadChangelog()
     }
-  }, [open])
+  }, [open, setLastSeenVersion, onNotificationUpdate])
 
   const parseChangelog = (text: string): ChangelogEntry[] => {
     const entries: ChangelogEntry[] = []
@@ -63,8 +124,8 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
       
-      // Match version headers like ## [1.2.0] - 2025-01-08
-      const versionMatch = line.match(/^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})/)
+      // Match version headers like ## [0.3.2] - 11 de agosto de 2025
+      const versionMatch = line.match(/^## \[(\d+\.\d+\.\d+)\] - (.+)/)
       if (versionMatch) {
         if (currentEntry) {
           entries.push(currentEntry)
@@ -79,20 +140,31 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
         continue
       }
 
-      // Match change type headers like ### Agregado
-      const changeTypeMatch = line.match(/^### (Agregado|Cambiado|Corregido|Removido|Seguridad|Mejorado)/)
+      // Match change type headers with emojis like ### 🆕 Nuevas funciones
+      const changeTypeMatch = line.match(/^### [🆕✨🔧❌] (.+)/)
       if (changeTypeMatch && currentEntry) {
-        currentChangeType = changeTypeMatch[1]
+        const typeText = changeTypeMatch[1]
+        // Map Spanish types to the expected English types for consistency
+        let mappedType = 'Agregado'
+        if (typeText.includes('Nuevas funciones') || typeText.includes('Sistema inicial')) {
+          mappedType = 'Agregado'
+        } else if (typeText.includes('Mejoras') || typeText.includes('Características principales')) {
+          mappedType = 'Mejorado'
+        } else if (typeText.includes('Correcciones')) {
+          mappedType = 'Corregido'
+        }
+        
+        currentChangeType = mappedType
         currentEntry.changes.push({
-          type: currentChangeType as any,
+          type: mappedType as any,
           items: []
         })
-        console.log('Found change type:', currentChangeType)
+        console.log('Found change type:', mappedType)
         continue
       }
 
-      // Match bullet points like - **Feature** description
-      const bulletMatch = line.match(/^- \*\*(.*?)\*\* (.*)/)
+      // Match bullet points like - **Feature**: description
+      const bulletMatch = line.match(/^- \*\*(.*?)\*\*: (.*)/)
       if (bulletMatch && currentEntry && currentChangeType) {
         const currentChange = currentEntry.changes[currentEntry.changes.length - 1]
         if (currentChange) {
@@ -103,12 +175,12 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
         continue
       }
 
-      // Match simple bullet points like - Simple description
-      const simpleBulletMatch = line.match(/^- (.+)/)
+      // Match simple bullet points like - **Simple description**
+      const simpleBulletMatch = line.match(/^- \*\*(.*?)\*\*(.*)/)
       if (simpleBulletMatch && currentEntry && currentChangeType) {
         const currentChange = currentEntry.changes[currentEntry.changes.length - 1]
         if (currentChange) {
-          const item = simpleBulletMatch[1]
+          const item = simpleBulletMatch[1] + (simpleBulletMatch[2] || '')
           currentChange.items.push(item)
           console.log('Added simple bullet item:', item)
         }
@@ -142,6 +214,13 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
 
 
   const formatDate = (dateString: string) => {
+    // Handle both ISO format (2025-08-11) and Spanish format (11 de agosto de 2025)
+    if (dateString.includes('de ')) {
+      // Already in Spanish format
+      return dateString
+    }
+    
+    // Convert ISO date to Spanish format
     const date = new Date(dateString)
     return date.toLocaleDateString('es-ES', {
       year: 'numeric',
@@ -162,6 +241,11 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
             <DialogTitle className="flex items-center gap-2">
               <HelpCircle className="w-5 h-5 text-accent-blue" />
               ¿Qué hay de nuevo?
+              {hasNewUpdates && (
+                <Badge variant="destructive" className="text-xs animate-pulse">
+                  Nuevo
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
         </div>
@@ -178,29 +262,29 @@ export function WhatsNewDialog({ children }: WhatsNewDialogProps) {
               <div className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">v1.2.0</Badge>
+                    <Badge variant="outline">v0.3.2</Badge>
                     <Badge variant="secondary" className="text-xs">Reciente</Badge>
                   </div>
-                  <div className="text-sm text-muted-foreground">8 de enero de 2025</div>
+                  <div className="text-sm text-muted-foreground">11 de agosto de 2025</div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <Plus className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Agregado</span>
+                      <Sparkles className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">🆕 Nuevas funciones</span>
                     </div>
                     <ul className="ml-6 space-y-1 text-sm text-muted-foreground">
-                      <li>• Botón &quot;What&apos;s New&quot; para mostrar actualizaciones</li>
-                      <li>• Campo Peso obligatorio en pre-registro</li>
-                      <li>• Nuevo orden de campos mejorado</li>
+                      <li>• <strong>Confirmaciones más claras</strong>: Ventanas de confirmación más fáciles de usar</li>
+                      <li>• <strong>Mejor experiencia en móviles</strong>: Todo se ve perfecto en cualquier dispositivo</li>
+                      <li>• <strong>Colores más consistentes</strong>: Experiencia visual unificada</li>
                     </ul>
                   </div>
                 </div>
               </div>
 
               <div className="text-center text-sm text-muted-foreground">
-                Sistema inicializado correctamente
+                ¡Gracias por usar el sistema! ✨
               </div>
             </div>
           ) : (

@@ -26,6 +26,7 @@ import {
   searchClientsByName,
   validateTrackingNumber,
   validatePeso,
+  normalizePeso,
   PreregistroPackage,
   TrackingSearchResult,
   CasilleroOption,
@@ -228,15 +229,50 @@ function PreRegistroContent() {
 
   // Enhanced weight input handler with auto-focus logic
   const handleWeightInputChange = (value: string) => {
-    // Update form data first
-    handleInputChange("peso", value)
+    // Check if user entered exactly 4 decimal places
+    if (hasProperDecimals(value)) {
+      // Normalize weight if necessary when 4 decimals are entered
+      const normalizedValue = normalizePeso(value)
+      
+      // Update form data with normalized value
+      handleInputChange("peso", normalizedValue)
+      
+      // Show notification if weight was adjusted
+      if (normalizedValue !== value) {
+        toast({
+          title: "Peso ajustado",
+          description: `El peso mínimo es 0.0950 kg. Valor ajustado de ${value} kg a ${normalizedValue} kg.`,
+          duration: 2000
+        })
+      }
+      
+      // Auto-focus client dropdown after short delay if weight is valid
+      if (validatePeso(normalizedValue)) {
+        setTimeout(() => {
+          clientDropdownRef.current?.click()
+        }, 150)
+      }
+    } else {
+      // Update form data with raw value (no normalization during typing)
+      handleInputChange("peso", value)
+    }
+  }
+
+  // Handle weight input blur - apply normalization when user finishes entering value
+  const handleWeightInputBlur = (value: string) => {
+    if (value.trim() === '') return // Don't normalize empty values
     
-    // Check if weight is valid and appears to be from scale (has 4+ decimal places)
-    if (validatePeso(value) && hasProperDecimals(value)) {
-      // Auto-focus client dropdown after short delay
-      setTimeout(() => {
-        clientDropdownRef.current?.click()
-      }, 150)
+    const normalizedValue = normalizePeso(value)
+    if (normalizedValue !== value) {
+      // Update form data with normalized value
+      handleInputChange("peso", normalizedValue)
+      
+      // Show user that we normalized their input
+      toast({
+        title: "Peso ajustado",
+        description: `El peso mínimo es 0.0950 kg. Valor ajustado de ${value} kg a ${normalizedValue} kg.`,
+        duration: 3000
+      })
     }
   }
 
@@ -345,6 +381,20 @@ function PreRegistroContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Normalize weight before validation as final safeguard
+    const normalizedWeight = normalizePeso(formData.peso)
+    if (normalizedWeight !== formData.peso) {
+      // Update form data with normalized weight
+      setFormData(prev => ({ ...prev, peso: normalizedWeight }))
+      
+      // Show user that we normalized their input
+      toast({
+        title: "Peso ajustado",
+        description: `El peso mínimo es 0.0950 kg. Valor ajustado de ${formData.peso} kg a ${normalizedWeight} kg.`,
+        duration: 2000
+      })
+    }
+
     // Validate required fields
     if (!validateTrackingNumber(formData.numeroTracking)) {
       toast({
@@ -355,11 +405,11 @@ function PreRegistroContent() {
       return
     }
     
-    if (!validatePeso(formData.peso)) {
+    if (!validatePeso(normalizedWeight)) {
       toast({
         variant: "destructive",
         title: "Peso inválido",
-        description: "Ingrese un peso válido entre 0.0000001 kg (0.0001 gramos) y 999.99 kg"
+        description: "Ingrese un peso válido entre 0.0950 kg y 999.99 kg"
       })
       return
     }
@@ -377,7 +427,7 @@ function PreRegistroContent() {
           numeroTracking: formData.numeroTracking.trim(),
           numeroCasillero: formData.numeroCasillero,
           contenido: formData.contenido.trim(),
-          peso: formData.peso,
+          peso: normalizedWeight, // Use normalized weight
           numeroTarima: formData.numeroTarima
         }
         
@@ -810,11 +860,12 @@ function PreRegistroContent() {
                   id="peso"
                   type="number"
                   inputMode="decimal"
-                  step="0.0000001"
-                  min="0.0000001"
+                  step="0.0001"
+                  min="0.0950"
                   max="999.99"
                   value={formData.peso}
                   onChange={(e) => handleWeightInputChange(e.target.value)}
+                  onBlur={(e) => handleWeightInputBlur(e.target.value)}
                   placeholder={
                     batchSession?.isActive && batchSession.defaultValues.peso
                       ? "Valor predeterminado del lote"

@@ -300,7 +300,7 @@ export function validateTrackingNumber(trackingNumber: string): boolean {
 
 /**
  * Validate peso format and range
- * Minimum: 0.0000001 kg (0.0001 grams)
+ * Minimum: 0.0950 kg
  * Maximum: 999.99 kg
  */
 export function validatePeso(peso: string): boolean {
@@ -309,5 +309,28 @@ export function validatePeso(peso: string): boolean {
   }
   
   const pesoNum = parseFloat(peso)
-  return !isNaN(pesoNum) && pesoNum >= 0.0000001 && pesoNum <= 999.99
+  return !isNaN(pesoNum) && pesoNum >= 0.0950 && pesoNum <= 999.99
+}
+
+/**
+ * Normalize peso to ensure minimum weight of 0.0950 kg
+ * If weight is below minimum, it will be set to 0.0950 kg
+ */
+export function normalizePeso(peso: string): string {
+  if (!peso || peso.trim() === '') {
+    return ''
+  }
+  
+  const pesoNum = parseFloat(peso)
+  if (isNaN(pesoNum)) {
+    return peso // Return original if not a valid number
+  }
+  
+  const minimumWeight = 0.0950
+  if (pesoNum < minimumWeight) {
+    // Return with 4 decimal places to match expected format
+    return minimumWeight.toFixed(4)
+  }
+  
+  return peso // Return original if already above minimum
 }

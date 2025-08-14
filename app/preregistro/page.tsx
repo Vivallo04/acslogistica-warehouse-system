@@ -483,35 +483,36 @@ function PreRegistroContent() {
           const statusText = actualStatus || 'procesado'
           
           // Show different toast based on action taken
-          const toastConfig = {
-            created: {
-              title: "✅ Paquete nuevo creado",
-              description: `CI: ${response.data.ci_paquete} - Tracking: ${formData.numeroTracking} - No estaba prealertado`,
-              className: "bg-green-50 border-green-200"
-            },
-            status_changed: {
-              title: "🔄 Estado actualizado", 
-              description: `Paquete cambiado de Prealertado a Vuelo Asignado - CI: ${response.data.ci_paquete}`,
-              className: "bg-blue-50 border-blue-200"
-            },
-            updated: {
-              title: "✏️ Paquete actualizado",
-              description: `CI: ${response.data.ci_paquete} - Tracking actualizado exitosamente`,
-              className: "bg-amber-50 border-amber-200"
-            }
+          const action = response.data.actionTaken || 'updated'
+          
+          if (action === 'created') {
+            toast({
+              title: "Paquete nuevo creado",
+              description: `No estaba prealertado. CI asignado: ${response.data.ci_paquete}`,
+              duration: 5000
+            })
+          } else if (action === 'status_changed') {
+            toast({
+              title: "Estado actualizado a Vuelo Asignado",
+              description: `El paquete prealertado ahora está en el almacén. CI: ${response.data.ci_paquete}`,
+              duration: 5000
+            })
+          } else {
+            toast({
+              title: "Paquete actualizado",
+              description: `Información actualizada exitosamente. CI: ${response.data.ci_paquete}`,
+              duration: 5000
+            })
           }
           
-          const action = response.data.actionTaken || 'updated'
-          const config = toastConfig[action as keyof typeof toastConfig] || toastConfig.updated
-          
-          toast({
-            title: config.title,
-            description: batchSession?.isActive 
-              ? `${config.description} - Lote: ${(batchSession.packagesScanned || 0) + 1} paquetes`
-              : config.description,
-            duration: 6000,
-            className: config.className
-          })
+          // Add batch info if in batch mode
+          if (batchSession?.isActive) {
+            toast({
+              title: "Progreso del lote",
+              description: `${(batchSession.packagesScanned || 0) + 1} paquetes procesados en esta sesión`,
+              duration: 3000
+            })
+          }
           
           // Auto-focus tracking input for rapid scanning in batch mode
           if (batchSession?.isActive && batchSession.status === 'active') {

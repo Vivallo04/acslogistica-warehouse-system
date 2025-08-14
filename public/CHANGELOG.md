@@ -2,6 +2,18 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.4] - 14 de agosto de 2025
+
+### 🔧 Correcciones críticas
+- **Números CI únicos garantizados**: Se corrigió un problema crítico donde el sistema podía generar números CI duplicados cuando varias personas procesaban paquetes al mismo tiempo
+- **Sincronización perfecta con Drupal**: El sistema ahora está completamente sincronizado con Drupal para evitar conflictos de numeración
+- **Peso mínimo automático**: Si ingresas un peso menor a 0.0950 kg, el sistema automáticamente lo corrige al mínimo permitido
+
+### ✨ Mejoras
+- **Generación de CI más confiable**: El sistema ahora usa un método más robusto que garantiza que cada paquete tenga un número único
+- **Validación de peso mejorada**: El campo de peso ahora valida y normaliza automáticamente cuando ingresas 4 decimales
+- **Mayor estabilidad**: Se eliminaron condiciones de carrera que podían causar errores al procesar paquetes simultáneamente
+
 ## [0.3.3] - 11 de agosto de 2025
 
 ### ✨ Mejoras

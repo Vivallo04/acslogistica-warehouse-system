@@ -2,6 +2,22 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.5] - 14 de agosto de 2025
+
+### 🆕 Nuevas funciones
+- **Búsqueda automática de paquetes prealertados**: El sistema ahora busca automáticamente si un paquete ya existe antes de crear uno nuevo
+- **Actualización inteligente de contenido**: El contenido prealertado se preserva y solo se actualiza si estaba vacío
+- **Notificaciones específicas por acción**: Diferentes mensajes según si el paquete es nuevo, actualizado o cambió de estado
+
+### ✨ Mejoras
+- **Procesamiento más inteligente**: El sistema detecta automáticamente paquetes prealertados y los actualiza en lugar de crear duplicados
+- **Mejor manejo de tracking duplicado**: Ahora puedes actualizar paquetes con el mismo número de tracking sin errores
+- **Mensajes más claros**: Las notificaciones indican exactamente qué pasó con cada paquete (nuevo, actualizado o cambio de estado)
+### 🔧 Correcciones
+- **Tracking idéntico permitido**: Se corrigió el error que impedía actualizar paquetes con el mismo número de tracking
+- **Preservación de contenido**: El contenido prealertado ya no se sobrescribe al actualizar el paquete
+- **Actualización selectiva**: Solo se actualizan los campos necesarios, preservando la información existente
+
 ## [0.3.4] - 14 de agosto de 2025
 
 ### 🔧 Correcciones críticas

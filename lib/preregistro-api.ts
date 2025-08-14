@@ -29,6 +29,9 @@ export interface PreregistroResponse {
     pdfUrl?: string
     finalStatus?: string
     finalStatusId?: number
+    actionTaken?: 'created' | 'updated' | 'status_changed'
+    previousStatus?: string
+    wasExistingPackage?: boolean
     package: PreregistroPackage
   }
   error?: string
@@ -178,6 +181,9 @@ export async function processPackage(
       processingTimeSeconds: number
       finalStatus?: string
       finalStatusId?: number
+      actionTaken?: string
+      previousStatus?: string
+      wasExistingPackage?: boolean
     }>('/Preregistro/process', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -193,6 +199,9 @@ export async function processPackage(
         pdfUrl: response.pdfUrl,
         finalStatus: response.finalStatus,
         finalStatusId: response.finalStatusId,
+        actionTaken: response.actionTaken as 'created' | 'updated' | 'status_changed' | undefined,
+        previousStatus: response.previousStatus,
+        wasExistingPackage: response.wasExistingPackage,
         package: {
           ...packageData,
           id: response.packageNid.toString(),

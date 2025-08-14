@@ -482,12 +482,35 @@ function PreRegistroContent() {
           const isUpdate = !!existingPackage
           const statusText = actualStatus || 'procesado'
           
+          // Show different toast based on action taken
+          const toastConfig = {
+            created: {
+              title: "✅ Paquete nuevo creado",
+              description: `CI: ${response.data.ci_paquete} - Tracking: ${formData.numeroTracking} - No estaba prealertado`,
+              className: "bg-green-50 border-green-200"
+            },
+            status_changed: {
+              title: "🔄 Estado actualizado", 
+              description: `Paquete cambiado de Prealertado a Vuelo Asignado - CI: ${response.data.ci_paquete}`,
+              className: "bg-blue-50 border-blue-200"
+            },
+            updated: {
+              title: "✏️ Paquete actualizado",
+              description: `CI: ${response.data.ci_paquete} - Tracking actualizado exitosamente`,
+              className: "bg-amber-50 border-amber-200"
+            }
+          }
+          
+          const action = response.data.actionTaken || 'updated'
+          const config = toastConfig[action as keyof typeof toastConfig] || toastConfig.updated
+          
           toast({
-            title: `Paquete procesado exitosamente`,
+            title: config.title,
             description: batchSession?.isActive 
-              ? `Estado: ${statusText} - CI: ${response.data.ci_paquete} - Lote: ${(batchSession.packagesScanned || 0) + 1} paquetes`
-              : `Estado: ${statusText} - CI: ${response.data.ci_paquete} para tracking ${formData.numeroTracking}`,
-            duration: 5000
+              ? `${config.description} - Lote: ${(batchSession.packagesScanned || 0) + 1} paquetes`
+              : config.description,
+            duration: 6000,
+            className: config.className
           })
           
           // Auto-focus tracking input for rapid scanning in batch mode

@@ -2,6 +2,12 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.7] - 15 de agosto de 2025
+
+### 🔧 Correcciones críticas
+- **Paquetes sin usuario ahora visibles**: Se corrigió el problema donde los paquetes sin "creado por" no aparecían en el Recibidor de Miami
+- **Inclusión completa de paquetes**: Todos los paquetes ahora se muestran, incluyendo aquellos sin usuario asignado (uid = 0 o NULL)
+
 ## [0.3.6] - 15 de agosto de 2025
 
 ### 🔧 Correcciones críticas

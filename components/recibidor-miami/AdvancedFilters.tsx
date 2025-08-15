@@ -148,7 +148,7 @@ export function AdvancedFilters({
                   <Input
                     id="advanced-tracking"
                     type="text"
-                    placeholder="Número de tracking o cliente"
+                    placeholder="Número de tracking"
                     value={filters.buscarPorTracking}
                     onChange={(e) => {
                       const value = e.target.value

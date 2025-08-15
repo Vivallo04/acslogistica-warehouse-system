@@ -19,6 +19,8 @@ import { AIContentScanner } from "@/components/preregistro/AIContentScanner"
 import { SessionHistory, ProcessedPackage } from "@/components/preregistro/SessionHistory"
 import { PrintQueueDialog } from "@/components/preregistro/PrintQueueDialog"
 import { ConfigurationDialog } from "@/components/preregistro/ConfigurationDialog"
+import { NotificationSettings, getNotificationSettings } from "@/components/preregistro/NotificationConfiguration"
+import { TrackingMatchDropdown } from "@/components/preregistro/TrackingMatchDropdown"
 import { 
   searchPackagesByTracking,
   processPackage,
@@ -141,6 +143,7 @@ function PreRegistroContent() {
   const [showConfigurationDialog, setShowConfigurationDialog] = useState(false)
   const [printersAvailable, setPrintersAvailable] = useState(false)
   const [printSettings, setPrintSettings] = useState<PrintSettings>(DEFAULT_PRINT_SETTINGS)
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(getNotificationSettings())
   
   // Combobox state for client search
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false)
@@ -194,6 +197,12 @@ function PreRegistroContent() {
     if (stored) {
       setPrintSettings(stored)
     }
+  }, [])
+
+  // Load notification settings on component mount
+  useEffect(() => {
+    const settings = getNotificationSettings()
+    setNotificationSettings(settings)
   }, [])
 
   // Debounced client search
@@ -307,7 +316,7 @@ function PreRegistroContent() {
       try {
         setTrackingSearch(prev => ({ ...prev, isSearching: true }))
         
-        const searchResults = await searchPackagesByTracking(value)
+        const searchResults = await searchPackagesByTracking(value, selectedClient?.uid)
         
         setTrackingSearch({
           isSearching: false,
@@ -315,29 +324,64 @@ function PreRegistroContent() {
           showSuggestions: searchResults.matchType !== 'none'
         })
         
-        // If exact match found, populate form with existing data
+        // Handle exact matches (existing behavior)
         if (searchResults.matchType === 'exact' && searchResults.existingPackage) {
           const existing = searchResults.existingPackage
           setFormData(prev => ({
             ...prev,
             numeroCasillero: existing.numeroCasillero || prev.numeroCasillero,
             contenido: existing.contenido || prev.contenido,
-            peso: existing.peso || prev.peso,
+            // peso: Don't auto-populate peso - prealertado packages have peso=0, keep user input
             numeroTarima: existing.numeroTarima || prev.numeroTarima
           }))
-          
-          // TODO: Set selected client based on existing package's numeroCasillero (UID)
-          // For now, we'll need to fetch client details if needed
           
           toast({
             title: "Paquete encontrado",
             description: `Información cargada para tracking ${value}`,
             duration: 3000
           })
-        } else if (searchResults.matchType === 'partial' && searchResults.packages.length > 0) {
+        }
+        // Handle suggested matches (single suitable partial match)
+        else if (searchResults.suggestedMatch) {
+          const suggested = searchResults.suggestedMatch
+          setFormData(prev => ({
+            ...prev,
+            // Keep new tracking number but populate other fields
+            numeroCasillero: suggested.numeroCasillero || prev.numeroCasillero,
+            contenido: !prev.contenido ? (suggested.contenido || prev.contenido) : prev.contenido, // Only if null
+            // peso: Don't auto-populate peso - prealertado packages have peso=0, keep user input
+            numeroTarima: suggested.numeroTarima || prev.numeroTarima
+          }))
+
+          // Auto-select client if provided
+          if (searchResults.autoSelectedClient && !selectedClient) {
+            setSelectedClient(searchResults.autoSelectedClient)
+          }
+
+          toast({
+            title: "Paquete sugerido cargado",
+            description: `Datos del paquete ${suggested.estado} cargados. Mantiene nuevo tracking: ${value}`,
+            duration: 4000
+          })
+        }
+        // Handle multiple matches requiring user selection
+        else if (searchResults.needsUserSelection) {
+          // Auto-select client if provided
+          if (searchResults.autoSelectedClient && !selectedClient) {
+            setSelectedClient(searchResults.autoSelectedClient)
+          }
+
+          toast({
+            title: "Múltiples coincidencias",
+            description: `Se encontraron ${searchResults.packages.length} paquetes. Selecciona uno de la lista.`,
+            duration: 4000
+          })
+        }
+        // Handle other partial matches
+        else if (searchResults.matchType === 'partial' && searchResults.packages.length > 0) {
           toast({
             title: "Coincidencias parciales",
-            description: `Se encontraron ${searchResults.packages.length} paquetes similares`,
+            description: `Se encontraron ${searchResults.packages.length} paquetes similares pero no adecuados para auto-selección`,
             duration: 4000
           })
         }
@@ -433,7 +477,12 @@ function PreRegistroContent() {
         
         // Pass existing package if found for status transition
         const existingPackage = trackingSearch.searchResults?.existingPackage
-        const response = await processPackage(packageData, existingPackage)
+        // Pass notification settings for WhatsApp notifications
+        const response = await processPackage(packageData, existingPackage, {
+          whatsappEnabled: notificationSettings.whatsappEnabled,
+          whatsappOnSuccess: notificationSettings.whatsappOnSuccess,
+          whatsappOnError: notificationSettings.whatsappOnError
+        })
         
         if (response.success && response.data) {
           // Use actual status from backend database
@@ -1036,7 +1085,19 @@ function PreRegistroContent() {
                         Encontrado
                       </span>
                     )}
-                    {trackingSearch.searchResults?.matchType === 'partial' && (
+                    {trackingSearch.searchResults?.suggestedMatch && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full self-start sm:self-auto">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        Auto-sugerido: {trackingSearch.searchResults.suggestedMatch.estado}
+                      </span>
+                    )}
+                    {trackingSearch.searchResults?.needsUserSelection && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full self-start sm:self-auto">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        Selecciona: {trackingSearch.searchResults.packages.length} opciones
+                      </span>
+                    )}
+                    {trackingSearch.searchResults?.matchType === 'partial' && !trackingSearch.searchResults.suggestedMatch && !trackingSearch.searchResults.needsUserSelection && (
                       <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full self-start sm:self-auto">
                         <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                         Similares: {trackingSearch.searchResults.packages.length}
@@ -1058,9 +1119,60 @@ function PreRegistroContent() {
                 spellCheck={false}
                 className={cn(
                   "w-full font-mono transition-all duration-200 h-12 text-base sm:h-10 sm:text-sm",
-                  scannerMode && "ring-2 ring-green-500 border-green-500 bg-green-50"
+                  scannerMode && "ring-2 ring-green-500 border-green-500 bg-green-50 dark:bg-green-950/50 dark:text-green-100"
                 )}
               />
+
+              {/* Tracking Match Dropdown - Show when multiple matches need user selection */}
+              {trackingSearch.searchResults?.needsUserSelection && (
+                <div className="relative">
+                  <TrackingMatchDropdown
+                    matches={trackingSearch.searchResults.packages}
+                    onSelectMatch={(match) => {
+                      // Populate form with selected match data (keeping new tracking number)
+                      setFormData(prev => ({
+                        ...prev,
+                        numeroCasillero: match.numeroCasillero || prev.numeroCasillero,
+                        contenido: !prev.contenido ? (match.contenido || prev.contenido) : prev.contenido,
+                        // peso: Don't auto-populate peso - prealertado packages have peso=0, keep user input
+                        numeroTarima: match.numeroTarima || prev.numeroTarima
+                      }))
+
+                      // Set selected client based on match
+                      if (match.numeroCasillero) {
+                        setSelectedClient({
+                          uid: parseInt(match.numeroCasillero),
+                          displayName: `Cliente ${match.numeroCasillero}`,
+                          label: `Cliente ${match.numeroCasillero}`
+                        })
+                      }
+
+                      // Update tracking search to use this match as existing package
+                      setTrackingSearch(prev => ({
+                        ...prev,
+                        searchResults: prev.searchResults ? {
+                          ...prev.searchResults,
+                          existingPackage: match,
+                          needsUserSelection: false
+                        } : null,
+                        showSuggestions: false
+                      }))
+
+                      toast({
+                        title: "Coincidencia seleccionada",
+                        description: `Datos del paquete ${match.estado} cargados. Tracking actualizado a: ${formData.numeroTracking}`,
+                        duration: 3000
+                      })
+                    }}
+                    onDismiss={() => {
+                      setTrackingSearch(prev => ({
+                        ...prev,
+                        showSuggestions: false
+                      }))
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Número de Tarima - Required */}
@@ -1200,6 +1312,7 @@ function PreRegistroContent() {
       <ConfigurationDialog
         open={showConfigurationDialog}
         onOpenChange={setShowConfigurationDialog}
+        onNotificationSettingsChange={setNotificationSettings}
       />
     </div>
   )

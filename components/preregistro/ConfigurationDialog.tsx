@@ -11,17 +11,26 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Settings, Printer, Bell, Shield } from "lucide-react"
 import { PrinterConfigurationSection } from "./PrinterConfigurationSection"
+import { NotificationConfiguration, NotificationSettings } from "./NotificationConfiguration"
 
 interface ConfigurationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onNotificationSettingsChange?: (settings: NotificationSettings) => void
 }
 
 export function ConfigurationDialog({
   open,
-  onOpenChange
+  onOpenChange,
+  onNotificationSettingsChange
 }: ConfigurationDialogProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<any>(null)
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(null)
+
+  const handleNotificationSettingsChange = (settings: NotificationSettings) => {
+    setNotificationSettings(settings)
+    onNotificationSettingsChange?.(settings)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -63,11 +72,11 @@ export function ConfigurationDialog({
               />
             </TabsContent>
 
-            <TabsContent value="notifications" className="h-full m-0">
-              <div className="p-6 text-center text-muted-foreground">
-                <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Configuración de Notificaciones</h3>
-                <p>Esta sección estará disponible en una futura actualización</p>
+            <TabsContent value="notifications" className="h-full m-0 overflow-y-auto">
+              <div className="p-6">
+                <NotificationConfiguration 
+                  onSettingsChange={handleNotificationSettingsChange}
+                />
               </div>
             </TabsContent>
 

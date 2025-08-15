@@ -18,6 +18,11 @@ export interface TrackingSearchResult {
   packages: PreregistroPackage[]
   matchType: 'exact' | 'partial' | 'none'
   existingPackage?: PreregistroPackage
+  suggestedMatch?: PreregistroPackage // Auto-selected partial match based on business logic
+  filteredByClient?: PreregistroPackage[] // Matches filtered by selected client
+  needsUserSelection?: boolean // True when multiple matches require user choice
+  autoSelectedClient?: ClientSearchResult // Auto-selected client from suggested match
+  matchingLogic?: string // Debug info about matching logic
 }
 
 export interface PreregistroResponse {
@@ -88,58 +93,115 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
  * Search for packages by tracking number (exact or partial matches)
  * Returns packages with status 'prealertado' or 'vuelo asignado'
  */
-export async function searchPackagesByTracking(trackingNumber: string): Promise<TrackingSearchResult> {
+export async function searchPackagesByTracking(
+  trackingNumber: string, 
+  selectedClientId?: number
+): Promise<TrackingSearchResult> {
   if (!trackingNumber.trim()) {
     return { packages: [], matchType: 'none' }
   }
 
   try {
-    // Use the test search endpoint with correct format
+    // Use the enhanced search endpoint
     const response = await apiCall<{
-      results: Array<{
+      allMatches: Array<{
         nid: number
         tracking: string
-        contenido?: string
-        peso: string
-        numeroTarima?: string
-        numeroCasillero: string
-        clienteName: string
-        estado: string
-        estadoId: number
-        ciPaquete?: string
-        fecha: string
+        content?: string
+        weight?: string
+        palletNumber?: string
+        lockerNumber?: string
+        clientName?: string
+        status: string
+        statusId: number
+        ciPackage?: string
+        date: string
       }>
-    }>(`/Preregistro/test/search?tracking=${encodeURIComponent(trackingNumber)}`)
+      matchType: string
+      exactMatch?: any
+      suggestedMatch?: any
+      clientFilteredMatches: Array<any>
+      needsUserSelection: boolean
+      autoSelectedClient?: {
+        uid: number
+        displayName: string
+        label: string
+      }
+      matchingLogic: string
+    }>('/Preregistro/search/enhanced', {
+      method: 'POST',
+      body: JSON.stringify({
+        trackingNumber: trackingNumber,
+        maxResults: 10,
+        selectedClientId: selectedClientId
+      })
+    })
 
     // Transform backend format to frontend format
-    const packages: PreregistroPackage[] = response.results?.map(pkg => ({
+    const packages: PreregistroPackage[] = response.allMatches?.map(pkg => ({
       id: pkg.nid.toString(),
       nid: pkg.nid,
       numeroTracking: pkg.tracking,
-      numeroCasillero: pkg.numeroCasillero,
-      contenido: pkg.contenido || '',
-      peso: pkg.peso,
-      numeroTarima: pkg.numeroTarima || '',
-      ci_paquete: pkg.ciPaquete,
-      estado: pkg.estado,
-      fecha_creacion: pkg.fecha
+      numeroCasillero: pkg.lockerNumber || '',
+      contenido: pkg.content || '',
+      peso: pkg.weight || '',
+      numeroTarima: pkg.palletNumber || '',
+      ci_paquete: pkg.ciPackage,
+      estado: pkg.status,
+      fecha_creacion: pkg.date
     })) || []
     
-    // Determine match type
-    const exactMatch = packages.find(pkg => 
-      pkg.numeroTracking.toLowerCase() === trackingNumber.toLowerCase()
-    )
-    
-    const matchType: TrackingSearchResult['matchType'] = exactMatch 
-      ? 'exact' 
-      : packages.length > 0 
-        ? 'partial' 
-        : 'none'
+    // Transform suggested match
+    const suggestedMatch = response.suggestedMatch ? {
+      id: response.suggestedMatch.nid.toString(),
+      nid: response.suggestedMatch.nid,
+      numeroTracking: response.suggestedMatch.tracking,
+      numeroCasillero: response.suggestedMatch.lockerNumber || '',
+      contenido: response.suggestedMatch.content || '',
+      peso: response.suggestedMatch.weight || '',
+      numeroTarima: response.suggestedMatch.palletNumber || '',
+      ci_paquete: response.suggestedMatch.ciPackage,
+      estado: response.suggestedMatch.status,
+      fecha_creacion: response.suggestedMatch.date
+    } : undefined
+
+    // Transform exact match
+    const exactMatch = response.exactMatch ? {
+      id: response.exactMatch.nid.toString(),
+      nid: response.exactMatch.nid,
+      numeroTracking: response.exactMatch.tracking,
+      numeroCasillero: response.exactMatch.lockerNumber || '',
+      contenido: response.exactMatch.content || '',
+      peso: response.exactMatch.weight || '',
+      numeroTarima: response.exactMatch.palletNumber || '',
+      ci_paquete: response.exactMatch.ciPackage,
+      estado: response.exactMatch.status,
+      fecha_creacion: response.exactMatch.date
+    } : undefined
+
+    // Transform filtered matches
+    const filteredByClient = response.clientFilteredMatches?.map(pkg => ({
+      id: pkg.nid.toString(),
+      nid: pkg.nid,
+      numeroTracking: pkg.tracking,
+      numeroCasillero: pkg.lockerNumber || '',
+      contenido: pkg.content || '',
+      peso: pkg.weight || '',
+      numeroTarima: pkg.palletNumber || '',
+      ci_paquete: pkg.ciPackage,
+      estado: pkg.status,
+      fecha_creacion: pkg.date
+    })) || []
 
     return {
       packages,
-      matchType,
-      existingPackage: exactMatch
+      matchType: response.matchType as 'exact' | 'partial' | 'none',
+      existingPackage: exactMatch || suggestedMatch, // Use suggested match if no exact match
+      suggestedMatch,
+      filteredByClient,
+      needsUserSelection: response.needsUserSelection,
+      autoSelectedClient: response.autoSelectedClient,
+      matchingLogic: response.matchingLogic
     }
   } catch (error) {
     console.error('Error searching packages by tracking:', error)
@@ -155,7 +217,12 @@ export async function searchPackagesByTracking(trackingNumber: string): Promise<
  */
 export async function processPackage(
   packageData: PreregistroPackage, 
-  existingPackage?: PreregistroPackage
+  existingPackage?: PreregistroPackage,
+  notificationSettings?: {
+    whatsappEnabled: boolean
+    whatsappOnSuccess: boolean
+    whatsappOnError: boolean
+  }
 ): Promise<PreregistroResponse> {
   try {
     // Match the backend DTO structure exactly
@@ -167,7 +234,11 @@ export async function processPackage(
       lockerNumber: packageData.numeroCasillero,
       content: packageData.contenido || null,
       userId: 1, // TODO: Get from auth context
-      processingStartTime: new Date().toISOString()
+      processingStartTime: new Date().toISOString(),
+      // Include WhatsApp notification settings
+      whatsappNotification: notificationSettings?.whatsappEnabled || false,
+      notifyOnSuccess: notificationSettings?.whatsappOnSuccess || false,
+      notifyOnError: notificationSettings?.whatsappOnError || false
     }
 
     const response = await apiCall<{

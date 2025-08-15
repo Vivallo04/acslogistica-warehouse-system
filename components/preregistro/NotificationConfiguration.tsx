@@ -20,8 +20,8 @@ export interface NotificationSettings {
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   whatsappEnabled: false,
-  whatsappOnSuccess: true,
-  whatsappOnError: true,
+  whatsappOnSuccess: false,
+  whatsappOnError: false,
   emailEnabled: false,
   emailOnBatchComplete: false,
   pushEnabled: true,

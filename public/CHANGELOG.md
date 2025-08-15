@@ -2,6 +2,21 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.6] - 15 de agosto de 2025
+
+### 🔧 Correcciones críticas
+- **Peso y datos visibles en Drupal**: Se corrigió el problema donde el peso y otros campos no aparecían en las vistas de Drupal
+- **Fechas visibles en Drupal**: Se corrigió el problema donde las fechas de creación no aparecían en las vistas de Drupal
+- **Visibilidad completa en Drupal**: Todos los campos (peso, tracking, tarima, contenido) ahora se muestran correctamente en las vistas de Drupal
+- **Tablas de revisión completas**: Ahora se crean y sincronizan todos los registros en las tablas de revisión (node_field_revision y node_revision__field_*)
+- **Compatibilidad mejorada con Drupal**: El sistema ahora usa el revision_id correcto (VID) en lugar del entity_id, asegurando compatibilidad total con las vistas de Drupal
+
+### ✨ Mejoras técnicas
+- **Integridad de datos mejorada**: Todos los campos de paquetes ahora mantienen la referencia correcta al VID (Version ID) de Drupal
+- **Registro completo de revisiones**: Se agregó la creación de registros en node_field_revision para visibilidad completa
+- **Mejor rastreo de versiones**: El sistema ahora preserva correctamente el historial de revisiones para auditoría
+- **Consultas SQL de verificación**: Se agregaron herramientas de diagnóstico para verificar la integridad de los datos
+
 ## [0.3.5] - 14 de agosto de 2025
 
 ### 🆕 Nuevas funciones

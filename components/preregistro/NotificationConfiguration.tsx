@@ -113,6 +113,7 @@ export function NotificationConfiguration({ onSettingsChange }: NotificationConf
               checked={settings.whatsappEnabled}
               onCheckedChange={() => handleToggle('whatsappEnabled')}
               className="data-[state=checked]:bg-green-600"
+              disabled={true}
             />
           </div>
 

@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import ClientRootLayout from "./clientLayout"
 
 export const metadata: Metadata = {
-  title: "WareHouse - ACS Logística",
+  title: "Warehouse Management System - ACS Logística",
   description: "Dashboard de gestión para ACS Logística",
   generator: 'Lambda Costa Rica',
   icons: {

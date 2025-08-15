@@ -136,12 +136,12 @@ function DashboardContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-accent-blue" />
-            Bienvenido al WareHouse
+            Bienvenido al Warehouse Management System
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Te damos la bienvenida al WareHouse de ACS Logística. Desde aquí podrás gestionar 
+            Te damos la bienvenida al Warehouse Management System de ACS Logística. Desde aquí podrás gestionar 
             todas las operaciones y configuraciones del sistema.
           </p>
           

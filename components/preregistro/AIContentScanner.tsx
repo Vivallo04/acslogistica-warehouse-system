@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Card } from "@/components/ui/card"
@@ -292,10 +293,13 @@ export function AIContentScanner({ onContentGenerated, disabled = false }: AICon
               <div className="text-center">
                 <h3 className="font-medium mb-2">Imagen Capturada</h3>
                 <div className="relative inline-block">
-                  <img 
+                  <Image 
                     src={capturedImage} 
                     alt="Captured content" 
+                    width={500}
+                    height={300}
                     className="max-w-full max-h-64 object-contain rounded-lg border"
+                    unoptimized
                   />
                 </div>
               </div>

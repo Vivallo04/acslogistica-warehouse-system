@@ -50,13 +50,13 @@ export const ChartShimmer = () => {
   )
 }
 
-// Modern loading indicator
+// Modern loading indicator with skeleton bars instead of bouncing dots
 export const ModernLoader = () => (
-  <div className="flex items-center justify-center space-x-2">
+  <div className="flex items-center justify-center space-x-3">
     <div className="flex space-x-1">
-      <div className="w-3 h-3 bg-accent-blue rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <div className="w-3 h-3 bg-accent-blue/80 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <div className="w-3 h-3 bg-accent-blue/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      <div className="w-6 h-2 bg-muted rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+      <div className="w-4 h-2 bg-muted/80 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+      <div className="w-5 h-2 bg-muted/60 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
     </div>
     <span className="text-sm font-medium text-muted-foreground animate-pulse">Cargando datos...</span>
   </div>
@@ -80,24 +80,24 @@ export const TableRowShimmer = () => (
   </tr>
 )
 
-// Modern minimalist dots loading animation
+// Modern minimalist skeleton loading animation (replaced bouncing dots)
 export const DotsLoader = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
   const sizeClasses = {
-    sm: "w-1 h-1",
-    md: "w-2 h-2", 
-    lg: "w-3 h-3"
+    sm: "w-3 h-1",
+    md: "w-4 h-2", 
+    lg: "w-6 h-3"
   }
   
   return (
     <div className="flex space-x-1 items-center justify-center">
-      <div className={`${sizeClasses[size]} bg-current rounded-full animate-bounce [animation-delay:-0.3s]`}></div>
-      <div className={`${sizeClasses[size]} bg-current rounded-full animate-bounce [animation-delay:-0.15s]`}></div>
-      <div className={`${sizeClasses[size]} bg-current rounded-full animate-bounce`}></div>
+      <div className={`${sizeClasses[size]} bg-muted rounded-full animate-pulse [animation-delay:0s]`}></div>
+      <div className={`${sizeClasses[size]} bg-muted/80 rounded-full animate-pulse [animation-delay:0.2s]`}></div>
+      <div className={`${sizeClasses[size]} bg-muted/60 rounded-full animate-pulse [animation-delay:0.4s]`}></div>
     </div>
   )
 }
 
-// Modern pulse ring loader
+// Modern pulse skeleton loader
 export const PulseLoader = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
   const sizeClasses = {
     sm: "w-4 h-4",
@@ -107,8 +107,8 @@ export const PulseLoader = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
   
   return (
     <div className={`relative ${sizeClasses[size]}`}>
-      <div className="absolute inset-0 bg-current rounded-full animate-ping opacity-20"></div>
-      <div className={`${sizeClasses[size]} bg-current rounded-full animate-pulse opacity-60`}></div>
+      <div className="absolute inset-0 bg-muted/30 rounded-full animate-ping"></div>
+      <div className={`${sizeClasses[size]} bg-muted rounded-full animate-pulse`}></div>
     </div>
   )
 }
@@ -120,10 +120,18 @@ export const ProgressLoader = ({ className = "" }: { className?: string }) => (
   </div>
 )
 
-// Updated button spinner (now uses dots for consistency)
-export const ButtonSpinner = ({ size = "sm" }: { size?: "sm" | "md" | "lg" }) => (
-  <DotsLoader size={size} />
-)
+// Updated button spinner (now uses pulse skeleton for consistency)
+export const ButtonSpinner = ({ size = "sm" }: { size?: "sm" | "md" | "lg" }) => {
+  const sizeClasses = {
+    sm: "w-4 h-2",
+    md: "w-5 h-2", 
+    lg: "w-6 h-3"
+  }
+  
+  return (
+    <div className={`${sizeClasses[size]} bg-muted rounded-full animate-pulse`} />
+  )
+}
 
 // Page level loading overlay
 export const PageLoader = () => (
@@ -154,5 +162,46 @@ export const ContentSkeleton = ({ sections = 4 }: { sections?: number }) => (
         <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-background/60 to-transparent" />
       </Card>
     ))}
+  </div>
+)
+
+// Tracking search skeleton - inline loading for search states  
+export const TrackingSearchSkeleton = () => (
+  <div className="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-muted/30 text-muted-foreground rounded-full">
+    <div className="flex space-x-1">
+      <div className="w-1 h-1 bg-muted rounded-full animate-pulse" />
+      <div className="w-1 h-1 bg-muted/80 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+      <div className="w-1 h-1 bg-muted/60 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+    </div>
+    <span className="animate-pulse">Buscando...</span>
+  </div>
+)
+
+// Client search skeleton - for dropdown loading states
+export const ClientSearchSkeleton = () => (
+  <div className="p-3 space-y-2">
+    <div className="flex items-center space-x-2">
+      <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
+      <div className="flex-1 space-y-1">
+        <div className="w-32 h-3 bg-muted rounded animate-pulse" />
+        <div className="w-24 h-2 bg-muted/60 rounded animate-pulse" />
+      </div>
+    </div>
+  </div>
+)
+
+// Pagination loading skeleton - replaces spinner
+export const PaginationSkeleton = () => (
+  <div className="flex items-center space-x-2">
+    <div className="w-3 h-3 bg-muted rounded animate-pulse" />
+    <div className="w-16 h-3 bg-muted/60 rounded animate-pulse" />
+  </div>
+)
+
+// Inline search skeleton - subtle loading indicator
+export const InlineSearchSkeleton = () => (
+  <div className="inline-flex items-center space-x-1">
+    <div className="w-2 h-2 bg-muted rounded-full animate-pulse" />
+    <div className="w-12 h-2 bg-muted/60 rounded animate-pulse" />
   </div>
 )

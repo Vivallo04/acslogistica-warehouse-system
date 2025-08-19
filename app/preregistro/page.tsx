@@ -113,6 +113,7 @@ function PreRegistroContent() {
 
   // Refs for DOM manipulation
   const trackingInputRef = useRef<HTMLInputElement>(null)
+  const pesoInputRef = useRef<HTMLInputElement>(null)
   const tarimaSelectRef = useRef<HTMLButtonElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const clientDropdownRef = useRef<HTMLButtonElement>(null)
@@ -563,11 +564,12 @@ function PreRegistroContent() {
             })
           }
           
-          // Auto-focus tracking input for rapid scanning in batch mode
+          // Auto-focus peso field for rapid data entry after processing
+          // (The form reset already focuses peso field, this ensures it's focused even in batch mode)
           if (batchSession?.isActive && batchSession.status === 'active') {
             setTimeout(() => {
-              trackingInputRef.current?.focus()
-              trackingInputRef.current?.select()
+              pesoInputRef.current?.focus()
+              pesoInputRef.current?.select()
             }, 100)
           }
         } else {
@@ -620,6 +622,11 @@ function PreRegistroContent() {
     }))
     setSelectedClient(null)
     setClientSearchTerm("")
+    
+    // Auto-focus peso field after reset for rapid data entry
+    setTimeout(() => {
+      pesoInputRef.current?.focus()
+    }, 100)
   }
 
   const resetFormForBatch = () => {
@@ -632,6 +639,11 @@ function PreRegistroContent() {
         numeroTarima: batchSession.defaultValues.numeroTarima
       })
       // TODO: Handle batch client selection - for now keep the selected client
+      
+      // Auto-focus peso field after batch reset for rapid data entry
+      setTimeout(() => {
+        pesoInputRef.current?.focus()
+      }, 100)
     } else {
       resetForm()
     }
@@ -931,6 +943,7 @@ function PreRegistroContent() {
               <div className="flex items-center gap-2">
                 <Input
                   id="peso"
+                  ref={pesoInputRef}
                   type="number"
                   inputMode="decimal"
                   step="0.0001"

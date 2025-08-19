@@ -6,8 +6,6 @@ Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documen
 
 ### ✨ Mejoras de flujo de trabajo
 - **Enfoque automático en campo peso**: Después de procesar un paquete, el campo peso se enfoca automáticamente para entrada rápida de datos
-- **Navegación mejorada en modo lote**: El campo peso se enfoca automáticamente tanto en modo normal como en modo lote
-- **Flujo de trabajo optimizado**: Eliminada la necesidad de hacer clic manualmente en el campo peso después del procesamiento
 
 ## [0.3.8] - 19 de agosto de 2025
 
@@ -15,16 +13,6 @@ Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documen
 - **Peso visible en Drupal para todos los paquetes**: Se corrigió el problema donde el peso no aparecía en las vistas de Drupal para paquetes creados desde el backend API
 - **Campo de unidad de peso completado**: Ahora todos los paquetes incluyen tanto el número del peso como la unidad (kg) para renderizado correcto en Drupal
 - **Compatibilidad completa con campo Weight de Drupal**: Los paquetes creados por el API ahora son indistinguibles de los creados directamente en Drupal
-
-### ✨ Mejoras técnicas
-- **Inserción dual de datos de peso**: El sistema ahora inserta tanto `field_peso_number` como `field_peso_unit` en las tablas base y de revisión
-- **Consistencia automática de revisiones**: Se agregó verificación y corrección automática de datos faltantes en tablas de revisión
-- **Script de corrección masiva**: Se incluye script SQL para corregir paquetes existentes que carecían de unidad de peso
-- **Pruebas comprehensivas**: Se agregaron tests unitarios e integración para garantizar la funcionalidad del campo peso
-
-### 🔧 Scripts de migración
-- **Corrección de datos históricos**: Script automático para actualizar paquetes existentes sin unidad de peso
-- **Verificación de integridad**: Herramientas de diagnóstico para validar datos de peso en base de datos
 
 ## [0.3.7] - 15 de agosto de 2025
 
@@ -38,14 +26,6 @@ Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documen
 - **Peso y datos visibles en Drupal**: Se corrigió el problema donde el peso y otros campos no aparecían en las vistas de Drupal
 - **Fechas visibles en Drupal**: Se corrigió el problema donde las fechas de creación no aparecían en las vistas de Drupal
 - **Visibilidad completa en Drupal**: Todos los campos (peso, tracking, tarima, contenido) ahora se muestran correctamente en las vistas de Drupal
-- **Tablas de revisión completas**: Ahora se crean y sincronizan todos los registros en las tablas de revisión (node_field_revision y node_revision__field_*)
-- **Compatibilidad mejorada con Drupal**: El sistema ahora usa el revision_id correcto (VID) en lugar del entity_id, asegurando compatibilidad total con las vistas de Drupal
-
-### ✨ Mejoras técnicas
-- **Integridad de datos mejorada**: Todos los campos de paquetes ahora mantienen la referencia correcta al VID (Version ID) de Drupal
-- **Registro completo de revisiones**: Se agregó la creación de registros en node_field_revision para visibilidad completa
-- **Mejor rastreo de versiones**: El sistema ahora preserva correctamente el historial de revisiones para auditoría
-- **Consultas SQL de verificación**: Se agregaron herramientas de diagnóstico para verificar la integridad de los datos
 
 ## [0.3.5] - 14 de agosto de 2025
 

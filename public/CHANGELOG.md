@@ -2,10 +2,29 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.9] - 19 de agosto de 2025
+
+### ✨ Mejoras de flujo de trabajo
+- **Enfoque automático en campo peso**: Después de procesar un paquete, el campo peso se enfoca automáticamente para entrada rápida de datos
+- **Navegación mejorada en modo lote**: El campo peso se enfoca automáticamente tanto en modo normal como en modo lote
+- **Flujo de trabajo optimizado**: Eliminada la necesidad de hacer clic manualmente en el campo peso después del procesamiento
+
 ## [0.3.8] - 19 de agosto de 2025
 
 ### 🔧 Correcciones críticas
 - **Peso visible en Drupal para todos los paquetes**: Se corrigió el problema donde el peso no aparecía en las vistas de Drupal para paquetes creados desde el backend API
+- **Campo de unidad de peso completado**: Ahora todos los paquetes incluyen tanto el número del peso como la unidad (kg) para renderizado correcto en Drupal
+- **Compatibilidad completa con campo Weight de Drupal**: Los paquetes creados por el API ahora son indistinguibles de los creados directamente en Drupal
+
+### ✨ Mejoras técnicas
+- **Inserción dual de datos de peso**: El sistema ahora inserta tanto `field_peso_number` como `field_peso_unit` en las tablas base y de revisión
+- **Consistencia automática de revisiones**: Se agregó verificación y corrección automática de datos faltantes en tablas de revisión
+- **Script de corrección masiva**: Se incluye script SQL para corregir paquetes existentes que carecían de unidad de peso
+- **Pruebas comprehensivas**: Se agregaron tests unitarios e integración para garantizar la funcionalidad del campo peso
+
+### 🔧 Scripts de migración
+- **Corrección de datos históricos**: Script automático para actualizar paquetes existentes sin unidad de peso
+- **Verificación de integridad**: Herramientas de diagnóstico para validar datos de peso en base de datos
 
 ## [0.3.7] - 15 de agosto de 2025
 

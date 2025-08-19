@@ -2,6 +2,11 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.8] - 19 de agosto de 2025
+
+### 🔧 Correcciones críticas
+- **Peso visible en Drupal para todos los paquetes**: Se corrigió el problema donde el peso no aparecía en las vistas de Drupal para paquetes creados desde el backend API
+
 ## [0.3.7] - 15 de agosto de 2025
 
 ### 🔧 Correcciones críticas

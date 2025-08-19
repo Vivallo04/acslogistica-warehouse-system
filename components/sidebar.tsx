@@ -370,7 +370,7 @@ export function Sidebar() {
           "text-xs text-muted-foreground/60",
           isCollapsed ? "text-center" : "text-center"
         )}>
-          {isCollapsed ? "v0.3.7" : "Versión 0.3.7"}
+          {isCollapsed ? "v0.3.8" : "Versión 0.3.8"}
         </div>
       </div>
       

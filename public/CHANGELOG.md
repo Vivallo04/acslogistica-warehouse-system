@@ -2,6 +2,16 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.11] - 20 de agosto de 2025
+
+### 🔧 Correcciones
+- **Preservación de selección de tarima**: Se corrigió el problema donde el número de tarima se borraba al escanear un tracking que encontraba un paquete existente
+- **Autenticación Firebase simplificada**: Se eliminó la dependencia innecesaria de endpoints de base de datos para el registro de usuarios, volviendo al sistema puro de Firebase
+
+### ✨ Mejoras
+- **Opciones de tarima extendidas**: Ahora incluye tanto las tarimas de hoy como las de mañana para facilitar la planificación avanzada
+- **Mejor experiencia de usuario**: La selección de tarima se mantiene durante las búsquedas de tracking para evitar pérdida de datos
+
 ## [0.3.10] - 19 de agosto de 2025
 
 ### 🔧 Correcciones críticas

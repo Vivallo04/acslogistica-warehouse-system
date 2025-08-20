@@ -75,17 +75,34 @@ interface BatchSession {
 // Helper function to generate pallet options
 const generatePalletOptions = () => {
   const now = new Date()
-  const day = String(now.getDate()).padStart(2, '0')
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const year = String(now.getFullYear()).slice(-2)
-  const baseDate = `${day}${month}${year}`
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  
+  // Generate today's options
+  const todayDay = String(now.getDate()).padStart(2, '0')
+  const todayMonth = String(now.getMonth() + 1).padStart(2, '0')
+  const todayYear = String(now.getFullYear()).slice(-2)
+  const todayBase = `${todayDay}${todayMonth}${todayYear}`
+  
+  // Generate tomorrow's options
+  const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0')
+  const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0')
+  const tomorrowYear = String(tomorrow.getFullYear()).slice(-2)
+  const tomorrowBase = `${tomorrowDay}${tomorrowMonth}${tomorrowYear}`
   
   return [
-    { value: `${baseDate}-1`, label: `${baseDate}-1` },
-    { value: `${baseDate}-2`, label: `${baseDate}-2` },
-    { value: `${baseDate}-3`, label: `${baseDate}-3` },
-    { value: `${baseDate}-4`, label: `${baseDate}-4` },
-    { value: `${baseDate}-N/A`, label: `${baseDate}-N/A` }
+    // Today's options
+    { value: `${todayBase}-1`, label: `${todayBase}-1` },
+    { value: `${todayBase}-2`, label: `${todayBase}-2` },
+    { value: `${todayBase}-3`, label: `${todayBase}-3` },
+    { value: `${todayBase}-4`, label: `${todayBase}-4` },
+    { value: `${todayBase}-N/A`, label: `${todayBase}-N/A` },
+    // Tomorrow's options
+    { value: `${tomorrowBase}-1`, label: `${tomorrowBase}-1` },
+    { value: `${tomorrowBase}-2`, label: `${tomorrowBase}-2` },
+    { value: `${tomorrowBase}-3`, label: `${tomorrowBase}-3` },
+    { value: `${tomorrowBase}-4`, label: `${tomorrowBase}-4` },
+    { value: `${tomorrowBase}-N/A`, label: `${tomorrowBase}-N/A` }
   ]
 }
 

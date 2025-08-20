@@ -2,6 +2,11 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.10] - 19 de agosto de 2025
+
+### 🔧 Correcciones críticas
+- **Eliminación DEFINITIVA de CI duplicados**: Se implementó un sistema de reserva atómica que maneja secuencias no consecutivas y gaps en numeración
+
 ## [0.3.9] - 19 de agosto de 2025
 
 ### ✨ Mejoras de flujo de trabajo

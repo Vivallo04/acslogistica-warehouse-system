@@ -333,7 +333,7 @@ function PreRegistroContent() {
             numeroCasillero: existing.numeroCasillero || prev.numeroCasillero,
             contenido: existing.contenido || prev.contenido,
             // peso: Don't auto-populate peso - prealertado packages have peso=0, keep user input
-            numeroTarima: existing.numeroTarima || prev.numeroTarima
+            numeroTarima: (existing.numeroTarima && existing.numeroTarima.trim()) || prev.numeroTarima
           }))
           
           toast({
@@ -351,7 +351,7 @@ function PreRegistroContent() {
             numeroCasillero: suggested.numeroCasillero || prev.numeroCasillero,
             contenido: !prev.contenido ? (suggested.contenido || prev.contenido) : prev.contenido, // Only if null
             // peso: Don't auto-populate peso - prealertado packages have peso=0, keep user input
-            numeroTarima: suggested.numeroTarima || prev.numeroTarima
+            numeroTarima: (suggested.numeroTarima && suggested.numeroTarima.trim()) || prev.numeroTarima
           }))
 
           // Auto-select client if provided
@@ -1148,7 +1148,7 @@ function PreRegistroContent() {
                         numeroCasillero: match.numeroCasillero || prev.numeroCasillero,
                         contenido: !prev.contenido ? (match.contenido || prev.contenido) : prev.contenido,
                         // peso: Don't auto-populate peso - prealertado packages have peso=0, keep user input
-                        numeroTarima: match.numeroTarima || prev.numeroTarima
+                        numeroTarima: (match.numeroTarima && match.numeroTarima.trim()) || prev.numeroTarima
                       }))
 
                       // Set selected client based on match

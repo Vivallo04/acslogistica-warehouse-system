@@ -688,9 +688,9 @@ function PreRegistroContent() {
   const applyBatchDefaults = (defaults: BatchSession['defaultValues']) => {
     setFormData(prev => ({
       numeroTracking: prev.numeroTracking, // Keep current tracking number
-      numeroCasillero: defaults.numeroCasillero || prev.numeroCasillero,
-      contenido: defaults.contenido || prev.contenido,
-      peso: defaults.peso || prev.peso,
+      numeroCasillero: defaults.numeroCasillero || "",
+      contenido: defaults.contenido || "", // Always clear content unless explicitly set as batch default
+      peso: defaults.peso || "",
       numeroTarima: defaults.numeroTarima || prev.numeroTarima
     }))
   }

@@ -330,11 +330,28 @@ function PreRegistroContent() {
     }
     
     // Search for existing packages when tracking number is long enough
+    // IMPORTANT: Client selection is now mandatory for package search
     if (value.length >= 3 && validateTrackingNumber(value)) {
+      // Require client selection before allowing package search
+      if (!selectedClient) {
+        toast({
+          variant: "destructive",
+          title: "Cliente requerido",
+          description: "Seleccione un cliente antes de buscar paquetes"
+        })
+        // Clear tracking search state
+        setTrackingSearch({
+          isSearching: false,
+          searchResults: null,
+          showSuggestions: false
+        })
+        return
+      }
+      
       try {
         setTrackingSearch(prev => ({ ...prev, isSearching: true }))
         
-        const searchResults = await searchPackagesByTracking(value, selectedClient?.uid)
+        const searchResults = await searchPackagesByTracking(value, selectedClient.uid)
         
         setTrackingSearch({
           isSearching: false,
@@ -458,6 +475,16 @@ function PreRegistroContent() {
     }
 
     // Validate required fields
+    if (!selectedClient) {
+      toast({
+        variant: "destructive",
+        title: "Cliente requerido",
+        description: "Seleccione un cliente antes de procesar el paquete"
+      })
+      clientDropdownRef.current?.click()
+      return
+    }
+    
     if (!validateTrackingNumber(formData.numeroTracking)) {
       toast({
         variant: "destructive",
@@ -987,7 +1014,7 @@ function PreRegistroContent() {
             {/* Número de Casillero / Cliente Asignado */}
             <div className="space-y-2">
               <Label htmlFor="numeroCasillero" className="text-sm font-medium">
-                Número de Casillero / Cliente Asignado
+                Número de Casillero / Cliente Asignado <span className="text-red-500">*</span>
               </Label>
               <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
                 <PopoverTrigger asChild>
@@ -1001,7 +1028,7 @@ function PreRegistroContent() {
                     <span className="truncate">
                       {selectedClient 
                         ? selectedClient.displayName
-                        : "Buscar cliente..."}
+                        : "Seleccione un cliente"}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -1143,7 +1170,11 @@ function PreRegistroContent() {
                 value={formData.numeroTracking}
                 onChange={(e) => handleTrackingInputChange(e.target.value)}
                 onKeyDown={handleTrackingKeyDown}
-                placeholder={scannerMode ? "Escanea el código de barras..." : "Ingresa el número de tracking"}
+                placeholder={
+                  scannerMode 
+                    ? "Escanea el código de barras..." 
+                    : "Ingresa el número de tracking"
+                }
                 required
                 autoComplete="off"
                 spellCheck={false}
@@ -1252,6 +1283,7 @@ function PreRegistroContent() {
                 )}
                 disabled={
                   isProcessing ||
+                  !selectedClient ||
                   !formData.numeroTracking.trim() || 
                   !formData.numeroTarima.trim() ||
                   !formData.peso.trim() ||

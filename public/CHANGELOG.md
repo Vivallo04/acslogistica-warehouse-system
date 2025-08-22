@@ -2,6 +2,19 @@
 
 Todas las mejoras y novedades del Sistema de Gestión de Almacén serán documentadas aquí.
 
+## [0.3.12] - 22 de agosto de 2025
+
+### 🔧 Correcciones
+- **Búsqueda de tracking mejorada**: Ahora usa los últimos 6 dígitos para coincidencias parciales, haciendo la búsqueda más rápida y precisa
+- **Prevención robusta de CI duplicados**: Sistema mejorado con reintentos y verificación para prevenir duplicación de números CI entre WMS y Drupal
+- **Corrección de contenido persistente**: Se corrigió el problema donde el contenido del paquete anterior aparecía después de procesar
+- **Autenticación Firebase simplificada**: Se eliminó la dependencia innecesaria de endpoints de base de datos para el registro de usuarios
+
+### ✨ Mejoras
+- **Mejor manejo de conflictos CI**: El sistema ahora detecta y resuelve automáticamente conflictos de numeración CI con reintentos inteligentes
+- **Búsqueda más eficiente**: Las coincidencias parciales ahora se enfocan en los últimos dígitos del tracking para mejor rendimiento
+- **Experiencia de usuario mejorada**: Los campos del formulario ahora se limpian correctamente después de cada procesamiento exitoso
+
 ## [0.3.11] - 20 de agosto de 2025
 
 ### 🔧 Correcciones

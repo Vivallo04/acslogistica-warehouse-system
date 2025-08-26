@@ -1,20 +1,33 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plane, Edit, Eye } from "lucide-react"
+import { PaginationSkeleton } from "@/components/ui/loading"
+import { Plane, Edit, Eye, MoreVertical, RefreshCw, ArrowRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog"
+import { bulkUpdatePackageStatus, filterUpdatablePackages, formatStatusUpdateMessage, STATUS_MAPPING, PackageStatusInfo } from "@/lib/recibidor-api"
 import { SearchHero } from "@/components/recibidor-miami/SearchHero"
 import { SmartFilterBar } from "@/components/recibidor-miami/SmartFilterBar"
 import { AdvancedFilters } from "@/components/recibidor-miami/AdvancedFilters"
 import { WMSErrorBoundary } from "@/components/ErrorBoundary"
 import { format } from "date-fns"
-import { type PackageSearchResult, type SearchResult, useFastSearch } from "@/hooks/useFastSearch"
+import { type PackageSearchResult, type SearchResult, useFastSearch, detectSearchType } from "@/hooks/useFastSearch"
 import * as Sentry from "@sentry/nextjs"
 
 // Constants
@@ -92,6 +105,15 @@ function RecibidorMiamiContent() {
   const [fastSearchResults, setFastSearchResults] = useState<PackageSearchResult[] | null>(null)
   const [fastSearchMeta, setFastSearchMeta] = useState<SearchResult | null>(null)
   const [isPaginationLoading, setIsPaginationLoading] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false)
+  
+  // Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [confirmationData, setConfirmationData] = useState<{
+    count: number
+    packages: PackageStatusInfo[]
+  } | null>(null)
   
   // Filter state
   const [filters, setFilters] = useState<PackageFilters>({
@@ -117,12 +139,24 @@ function RecibidorMiamiContent() {
   const { smartSearch } = useFastSearch()
 
   // Fetch packages function
-  const fetchPackages = useCallback(async () => {
+  const fetchPackages = useCallback(async (options?: { skipToast?: boolean }) => {
     return await Sentry.startSpan({
       name: 'Package Search',
       op: 'data.fetch'
     }, async () => {
+      // Declare abortController at the top level
+      let abortController: AbortController | null = null
+      
       try {
+        // Cancel previous request
+        if (fetchAbortControllerRef.current) {
+          fetchAbortControllerRef.current.abort()
+        }
+        
+        // Create new abort controller
+        abortController = new AbortController()
+        fetchAbortControllerRef.current = abortController
+        
         setLoading(true)
         setError(null)
 
@@ -135,7 +169,10 @@ function RecibidorMiamiContent() {
       if (filters.guiaAerea) params.append('GuiaAerea', filters.guiaAerea)
       if (filters.buscarPorTracking) params.append('BuscarPorTracking', filters.buscarPorTracking)
       if (filters.buscarPorCliente) params.append('BuscarPorCliente', filters.buscarPorCliente)
-      if (filters.ciPaquete) params.append('ClPaquete', filters.ciPaquete)
+      if (filters.ciPaquete) {
+        console.log('Sending CI Paquete search:', filters.ciPaquete)
+        params.append('ClPaquete', filters.ciPaquete)
+      }
       if (filters.desde) params.append('Desde', format(filters.desde, 'dd/MM/yyyy'))
       if (filters.hasta) params.append('Hasta', format(filters.hasta, 'dd/MM/yyyy'))
       
@@ -147,7 +184,9 @@ function RecibidorMiamiContent() {
       params.append('SortDirection', 'desc')
 
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'
-      const response = await fetch(`${apiBaseUrl}/api/Packages?${params.toString()}`)
+      const response = await fetch(`${apiBaseUrl}/api/Packages?${params.toString()}`, {
+        signal: abortController.signal
+      })
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -159,18 +198,91 @@ function RecibidorMiamiContent() {
         setPackages(data.data)
         setTotalCount(data.totalCount)
         
-        // Show success toast only if it's not the initial load
-        if (filters.pagina > 1 || Object.values(filters).some(value => 
-          value !== "" && value !== "all" && value !== undefined && value !== DEFAULT_PAGE_SIZE && value !== 1)) {
+        // Update CI Paquete search state if it was a CI Paquete search
+        if (filters.ciPaquete && filters.ciPaquete.length >= 3) {
+          console.log('CI Paquete search results:', {
+            searchTerm: filters.ciPaquete,
+            totalCount: data.totalCount,
+            sampleResults: data.data.slice(0, 3).map(p => ({ 
+              nid: p.nid, 
+              ciPaquete: p.ciPaquete,
+              tracking: p.tracking 
+            }))
+          })
+          setCiPaqueteSearchState({
+            isSearching: false,
+            resultCount: data.totalCount,
+            hasError: false
+          })
+        }
+
+        // Update Client search state if it was a client search
+        if (filters.buscarPorCliente && filters.buscarPorCliente.length >= 2) {
+          console.log('Client search results:', {
+            searchTerm: filters.buscarPorCliente,
+            totalCount: data.totalCount,
+            sampleResults: data.data.slice(0, 3).map(p => ({ 
+              nid: p.nid, 
+              creadoPor: p.creadoPor,
+              tracking: p.tracking 
+            }))
+          })
+          setClientSearchState({
+            isSearching: false,
+            resultCount: data.totalCount,
+            hasError: false
+          })
+        }
+
+        // Update Advanced Tracking search state if it was a tracking search
+        if (filters.buscarPorTracking && filters.buscarPorTracking.length >= 3) {
+          const searchType = detectSearchType(filters.buscarPorTracking)
+          console.log('Advanced tracking search results:', {
+            searchTerm: filters.buscarPorTracking,
+            searchType: searchType,
+            totalCount: data.totalCount,
+            sampleResults: data.data.slice(0, 3).map(p => ({ 
+              nid: p.nid, 
+              tracking: p.tracking,
+              creadoPor: p.creadoPor
+            }))
+          })
+          setAdvancedTrackingSearchState({
+            isSearching: false,
+            resultCount: data.totalCount,
+            hasError: false,
+            searchType: searchType
+          })
+        }
+        
+        // Show success toast only on filter changes (not on initial load or page changes)
+        const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+          if (key === 'pagina' || key === 'elementosPorPagina') return false
+          return value !== "" && value !== "all" && value !== undefined && value !== DEFAULT_PAGE_SIZE && value !== 1
+        })
+        
+        // Show toast only when filters are applied and not on initial load
+        if (!isInitialLoad && (hasActiveFilters || filters.pagina === 1)) {
           toast({
             title: "Paquetes cargados",
             description: `Se encontraron ${data.totalCount.toLocaleString()} paquetes`,
           })
         }
+        
+        // Mark initial load as complete
+        if (isInitialLoad) {
+          setIsInitialLoad(false)
+        }
       } else {
         throw new Error(data.message || 'Failed to fetch packages')
       }
     } catch (err) {
+      // Handle aborted requests gracefully - don't show errors or update state
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Request was aborted, ignoring...')
+        return
+      }
+      
       console.error('Error fetching packages:', err)
       Sentry.captureException(err, {
         tags: {
@@ -182,6 +294,30 @@ function RecibidorMiamiContent() {
       setError(errorMessage)
       setPackages([])
       setTotalCount(0)
+      
+      // Update CI Paquete search state on error
+      if (filters.ciPaquete && filters.ciPaquete.length >= 3) {
+        setCiPaqueteSearchState({
+          isSearching: false,
+          hasError: true
+        })
+      }
+
+      // Update Client search state on error
+      if (filters.buscarPorCliente && filters.buscarPorCliente.length >= 2) {
+        setClientSearchState({
+          isSearching: false,
+          hasError: true
+        })
+      }
+
+      // Update Advanced Tracking search state on error
+      if (filters.buscarPorTracking && filters.buscarPorTracking.length >= 3) {
+        setAdvancedTrackingSearchState({
+          isSearching: false,
+          hasError: true
+        })
+      }
       
       // If it's a connection error, provide helpful feedback
       if (errorMessage.includes('fetch') || errorMessage.includes('NetworkError')) {
@@ -204,9 +340,13 @@ function RecibidorMiamiContent() {
       }
       } finally {
         setLoading(false)
+        // Clean up the AbortController reference
+        if (abortController && fetchAbortControllerRef.current === abortController) {
+          fetchAbortControllerRef.current = null
+        }
       }
     })
-  }, [filters, toast])
+  }, [filters, isInitialLoad, toast])
 
   // Fetch metadata
   const fetchMetadata = useCallback(async () => {
@@ -249,16 +389,16 @@ function RecibidorMiamiContent() {
 
   useEffect(() => {
     fetchPackages()
-  }, [fetchPackages])
+  }, [filters, fetchPackages])
 
   // Filter handlers
-  const handleFilterChange = (key: keyof PackageFilters, value: FilterValue) => {
+  const handleFilterChange = useCallback((key: keyof PackageFilters, value: FilterValue) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
       pagina: 1 // Reset to first page when filter changes
     }))
-  }
+  }, [])
 
   const handlePageChange = (newPage: number) => {
     setFilters(prev => ({ ...prev, pagina: newPage }))
@@ -293,6 +433,12 @@ function RecibidorMiamiContent() {
       handleFilterChange(key as keyof PackageFilters, undefined)
     } else if (key === 'estado' || key === 'pais' || key === 'numeroTarima') {
       handleFilterChange(key as keyof PackageFilters, 'all')
+      
+      // Special case: If clearing tarima and current page size is 1000, reset it to default
+      // This prevents 400 error since 1000 items per page is only allowed when a tarima is selected
+      if (key === 'numeroTarima' && filters.elementosPorPagina === 1000) {
+        handleFilterChange('elementosPorPagina', DEFAULT_PAGE_SIZE)
+      }
     } else if (key === 'elementosPorPagina') {
       handleFilterChange(key as keyof PackageFilters, DEFAULT_PAGE_SIZE)
     } else {
@@ -382,15 +528,164 @@ function RecibidorMiamiContent() {
   }
   
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [ciPaqueteTimeout, setCiPaqueteTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [clientTimeout, setClientTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [advancedTrackingTimeout, setAdvancedTrackingTimeout] = useState<NodeJS.Timeout | null>(null)
   
-  // Cleanup timeout on unmount to prevent memory leaks
+  // AbortController refs for canceling previous requests
+  const fetchAbortControllerRef = useRef<AbortController | null>(null)
+  const clientSearchAbortControllerRef = useRef<AbortController | null>(null)
+  const ciPaqueteSearchAbortControllerRef = useRef<AbortController | null>(null)
+  
+  // CI Paquete search state
+  const [ciPaqueteSearchState, setCiPaqueteSearchState] = useState<{
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+  }>({
+    isSearching: false
+  })
+
+  // Client search state
+  const [clientSearchState, setClientSearchState] = useState<{
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+  }>({
+    isSearching: false
+  })
+
+  // Advanced tracking search state
+  const [advancedTrackingSearchState, setAdvancedTrackingSearchState] = useState<{
+    isSearching: boolean
+    resultCount?: number
+    hasError?: boolean
+    searchType?: 'tracking' | 'client' | 'mixed'
+  }>({
+    isSearching: false
+  })
+  
+  // CI Paquete search handler with debouncing
+  const handleCiPaqueteChange = useCallback((value: string) => {    
+    // Update the input value immediately (synchronously)
+    handleFilterChange('ciPaquete', value)
+    
+    // Clear previous timeout
+    if (ciPaqueteTimeout) {
+      clearTimeout(ciPaqueteTimeout)
+    }
+    
+    // Reset search state if less than 3 digits
+    if (value.length < 3) {
+      setCiPaqueteSearchState({ isSearching: false })
+      return
+    }
+    
+    // Set searching state
+    setCiPaqueteSearchState({ isSearching: true })
+    
+    // Debounced search after 800ms - this will trigger fetchPackages
+    const timeout = setTimeout(() => {
+      // The search will happen automatically because we already updated the filter
+      // and fetchPackages is watching the filters with useEffect
+      console.log('Debounced CI Paquete search triggered for:', value)
+    }, 800)
+    
+    setCiPaqueteTimeout(timeout)
+  }, [handleFilterChange, ciPaqueteTimeout])
+
+  // Client search handler with debouncing
+  const handleClientChange = useCallback((value: string) => {
+    // Update the input value immediately (synchronously)
+    handleFilterChange('buscarPorCliente', value)
+    
+    // Clear previous timeout
+    if (clientTimeout) {
+      clearTimeout(clientTimeout)
+    }
+    
+    // Reset search state if less than 2 characters
+    if (value.length < 2) {
+      setClientSearchState({ isSearching: false })
+      return
+    }
+    
+    // Set searching state
+    setClientSearchState({ isSearching: true })
+    
+    // Debounced search after 400ms - faster for text search
+    const timeout = setTimeout(() => {
+      console.log('Debounced client search triggered for:', value)
+    }, 400)
+    
+    setClientTimeout(timeout)
+  }, [handleFilterChange, clientTimeout])
+
+  // Advanced tracking search handler with smart detection (same as SearchHero)
+  const handleAdvancedTrackingChange = useCallback((value: string) => {
+    // Update the input value immediately (synchronously)
+    handleFilterChange('buscarPorTracking', value)
+    
+    // Clear previous timeout
+    if (advancedTrackingTimeout) {
+      clearTimeout(advancedTrackingTimeout)
+    }
+    
+    // Reset search state if less than 3 characters
+    if (value.length < 3) {
+      setAdvancedTrackingSearchState({ isSearching: false })
+      return
+    }
+    
+    // Detect search type using the same logic as SearchHero
+    const searchType = detectSearchType(value)
+    
+    // Set searching state
+    setAdvancedTrackingSearchState({ 
+      isSearching: true, 
+      searchType 
+    })
+    
+    // Debounced search after 300ms (same as SearchHero for consistency)
+    const timeout = setTimeout(() => {
+      console.log(`Advanced tracking search triggered for: ${value} (type: ${searchType})`)
+    }, 300)
+    
+    setAdvancedTrackingTimeout(timeout)
+  }, [handleFilterChange, advancedTrackingTimeout])
+
+  // Cleanup timeouts and abort controllers on unmount to prevent memory leaks
   useEffect(() => {
+    // Capture ref values at effect creation time
+    const fetchController = fetchAbortControllerRef.current
+    const clientController = clientSearchAbortControllerRef.current
+    const ciPaqueteController = ciPaqueteSearchAbortControllerRef.current
+    
     return () => {
       if (searchTimeout) {
         clearTimeout(searchTimeout)
       }
+      if (ciPaqueteTimeout) {
+        clearTimeout(ciPaqueteTimeout)
+      }
+      if (clientTimeout) {
+        clearTimeout(clientTimeout)
+      }
+      if (advancedTrackingTimeout) {
+        clearTimeout(advancedTrackingTimeout)
+      }
+      // Cancel any ongoing requests using captured values
+      if (fetchController) {
+        fetchController.abort()
+      }
+      if (clientController) {
+        clientController.abort()
+      }
+      if (ciPaqueteController) {
+        ciPaqueteController.abort()
+      }
     }
-  }, [searchTimeout])
+  }, [searchTimeout, ciPaqueteTimeout, clientTimeout, advancedTrackingTimeout])
   
   const handleQuickFilter = (filterType: string, value: string) => {
     console.log(`Applying quick filter: ${filterType} = ${value}`)
@@ -428,7 +723,8 @@ function RecibidorMiamiContent() {
   const getActiveAdvancedFiltersCount = () => {
     let count = 0
     if (filters.numeroTarima && filters.numeroTarima !== 'all') count++
-    if (filters.guiaAerea && filters.guiaAerea.trim()) count++
+    // Guía Aérea filter is disabled, so don't count it
+    // if (filters.guiaAerea && filters.guiaAerea.trim()) count++
     if (filters.buscarPorCliente && filters.buscarPorCliente.trim()) count++
     if (filters.ciPaquete && filters.ciPaquete.trim()) count++
     if (filters.elementosPorPagina !== DEFAULT_PAGE_SIZE) count++
@@ -460,6 +756,103 @@ function RecibidorMiamiContent() {
         description: `Se han seleccionado ${packages.length} paquetes`,
       })
     }
+  }
+
+  // Status update functionality
+  const handleBulkStatusUpdate = async () => {
+    if (selectedPackages.size === 0) {
+      toast({
+        variant: "destructive",
+        title: "Sin selección",
+        description: "Selecciona al menos un paquete para actualizar",
+      })
+      return
+    }
+
+    // Get selected packages data
+    const selectedPackagesData = (fastSearchResults || packages).filter(pkg => 
+      selectedPackages.has(pkg.nid)
+    )
+
+    // Filter packages that can be updated (only "Vuelo Asignado" status)
+    const updatablePackages = filterUpdatablePackages(selectedPackagesData)
+    
+    if (updatablePackages.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Sin paquetes elegibles",
+        description: "Ninguno de los paquetes seleccionados tiene estado 'Vuelo Asignado'",
+      })
+      return
+    }
+
+    // Show confirmation dialog
+    setConfirmationData({
+      count: updatablePackages.length,
+      packages: updatablePackages
+    })
+    setShowConfirmDialog(true)
+  }
+
+  // Handle confirmed status update
+  const handleConfirmStatusUpdate = async () => {
+    if (!confirmationData) return
+
+    setShowConfirmDialog(false)
+    setIsStatusUpdating(true)
+
+    try {
+      // Call the API to update package status
+      const response = await bulkUpdatePackageStatus(
+        confirmationData.packages.map(pkg => pkg.nid)
+      )
+
+      if (response.success && response.data) {
+        const { updatedCount, failedCount } = response.data
+        
+        // Show success message
+        toast({
+          title: "Estado actualizado",
+          description: formatStatusUpdateMessage(updatedCount, failedCount),
+        })
+
+        // Clear selection
+        setSelectedPackages(new Set())
+        
+        // Refresh the package list to show updated statuses
+        await fetchPackages({ skipToast: true })
+        
+      } else {
+        throw new Error(response.error || response.message)
+      }
+    } catch (error) {
+      console.error('Error updating package status:', error)
+      toast({
+        variant: "destructive",
+        title: "Error al actualizar",
+        description: error instanceof Error ? error.message : "Error desconocido",
+      })
+    } finally {
+      setIsStatusUpdating(false)
+      setConfirmationData(null)
+    }
+  }
+
+  // Handle dialog cancel
+  const handleCancelStatusUpdate = () => {
+    setShowConfirmDialog(false)
+    setConfirmationData(null)
+  }
+
+  // Get count of packages that can be status updated
+  const getUpdatablePackagesCount = () => {
+    if (selectedPackages.size === 0) return 0
+    
+    const selectedPackagesData = (fastSearchResults || packages).filter(pkg => 
+      selectedPackages.has(pkg.nid)
+    )
+    
+    return filterUpdatablePackages(selectedPackagesData).length
   }
 
 
@@ -530,11 +923,28 @@ function RecibidorMiamiContent() {
           elementosPorPagina: filters.elementosPorPagina
         }}
         availableTarimas={availableTarimas}
-        onFilterChange={(key, value) => handleFilterChange(key as keyof PackageFilters, value)}
-        onClearFilter={clearFilter}
+        onFilterChange={(key, value) => {
+          handleFilterChange(key as keyof PackageFilters, value)
+        }}
+        onCiPaqueteChange={handleCiPaqueteChange}
+        onClientChange={handleClientChange}
+        onAdvancedTrackingChange={handleAdvancedTrackingChange}
+        onClearFilter={(key) => {
+          if (key === 'ciPaquete') {
+            setCiPaqueteSearchState({ isSearching: false })
+          } else if (key === 'buscarPorCliente') {
+            setClientSearchState({ isSearching: false })
+          } else if (key === 'buscarPorTracking') {
+            setAdvancedTrackingSearchState({ isSearching: false })
+          }
+          clearFilter(key)
+        }}
         isOpen={isAdvancedOpen}
         onToggle={() => setIsAdvancedOpen(!isAdvancedOpen)}
         activeFiltersCount={getActiveAdvancedFiltersCount()}
+        ciPaqueteSearchState={ciPaqueteSearchState}
+        clientSearchState={clientSearchState}
+        advancedTrackingSearchState={advancedTrackingSearchState}
       />
 
 
@@ -605,9 +1015,45 @@ function RecibidorMiamiContent() {
                 <span className="text-sm text-muted-foreground">
                   {selectedPackages.size} seleccionados
                 </span>
-                <Button size="sm" variant="outline" className="rounded-full">
-                  Acciones
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="rounded-full" disabled={isStatusUpdating}>
+                      {isStatusUpdating ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Actualizando...
+                        </>
+                      ) : (
+                        <>
+                          <MoreVertical className="w-4 h-4 mr-2" />
+                          Acciones
+                        </>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80">
+                    <DropdownMenuItem 
+                      onClick={handleBulkStatusUpdate}
+                      disabled={isStatusUpdating || getUpdatablePackagesCount() === 0}
+                      className="px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50"
+                    >
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center mr-3">
+                          <ArrowRight className="h-4 w-4 text-accent-blue" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Actualizar estado</span>
+                          <span className="text-xs text-muted-foreground">
+                            Vuelo Asignado → En Aduana
+                          </span>
+                          <span className="text-xs text-accent-blue font-semibold">
+                            {getUpdatablePackagesCount()} paquete{getUpdatablePackagesCount() !== 1 ? 's' : ''} elegible{getUpdatablePackagesCount() !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
@@ -689,14 +1135,24 @@ function RecibidorMiamiContent() {
                       <TableCell>{pkg.peso}</TableCell>
                       <TableCell>{pkg.estado}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Acciones</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver Detalles
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -707,57 +1163,144 @@ function RecibidorMiamiContent() {
 
           {/* Fast Search Pagination */}
           {fastSearchResults && fastSearchMeta && (fastSearchMeta.hasNextPage || fastSearchMeta.hasPreviousPage) && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                <span>Página {fastSearchMeta.currentPage} de {Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)} • Búsqueda rápida</span>
+            <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground flex items-center gap-2 justify-center sm:justify-start">
+                <span className="text-center sm:text-left">Página {fastSearchMeta.currentPage} de {Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)} • Búsqueda rápida</span>
                 {isPaginationLoading && (
-                  <div className="animate-spin h-4 w-4 border-2 border-accent-blue border-t-transparent rounded-full"></div>
+                  <PaginationSkeleton />
                 )}
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleFastSearchPageChange(fastSearchMeta.currentPage - 1)}
                   disabled={!fastSearchMeta.hasPreviousPage || isPaginationLoading}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Anterior
+                  <span className="sm:hidden">Ant</span>
+                  <span className="hidden sm:inline">Anterior</span>
                 </Button>
                 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto px-2 sm:px-0">
                   {(() => {
                     const totalPages = Math.ceil((fastSearchMeta.totalAvailable || 0) / fastSearchMeta.pageSize)
                     const currentPage = fastSearchMeta.currentPage
-                    const maxButtons = 5
                     
-                    // Calculate start and end page numbers to show
-                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2))
-                    let endPage = Math.min(totalPages, startPage + maxButtons - 1)
+                    // Responsive maxButtons: 3 on mobile, 4 on medium, 5 on large screens
+                    const maxButtonsMobile = 3
+                    const maxButtonsMedium = 4
+                    const maxButtonsDesktop = 5
                     
-                    // Adjust start if we're near the end
-                    if (endPage - startPage + 1 < maxButtons) {
-                      startPage = Math.max(1, endPage - maxButtons + 1)
+                    // Calculate for mobile (simple range)
+                    let startPageMobile = Math.max(1, currentPage - Math.floor(maxButtonsMobile / 2))
+                    let endPageMobile = Math.min(totalPages, startPageMobile + maxButtonsMobile - 1)
+                    if (endPageMobile - startPageMobile + 1 < maxButtonsMobile) {
+                      startPageMobile = Math.max(1, endPageMobile - maxButtonsMobile + 1)
+                    }
+                    
+                    // Calculate for medium screens
+                    let startPageMedium = Math.max(1, currentPage - Math.floor(maxButtonsMedium / 2))
+                    let endPageMedium = Math.min(totalPages, startPageMedium + maxButtonsMedium - 1)
+                    if (endPageMedium - startPageMedium + 1 < maxButtonsMedium) {
+                      startPageMedium = Math.max(1, endPageMedium - maxButtonsMedium + 1)
+                    }
+                    
+                    // Calculate for desktop (with ellipsis logic)
+                    let startPageDesktop = Math.max(1, currentPage - Math.floor(maxButtonsDesktop / 2))
+                    let endPageDesktop = Math.min(totalPages, startPageDesktop + maxButtonsDesktop - 1)
+                    if (endPageDesktop - startPageDesktop + 1 < maxButtonsDesktop) {
+                      startPageDesktop = Math.max(1, endPageDesktop - maxButtonsDesktop + 1)
                     }
                     
                     const pages = []
-                    for (let i = startPage; i <= endPage; i++) {
-                      pages.push(i)
+                    
+                    // Add first page if not in desktop range (desktop only)
+                    if (startPageDesktop > 1) {
+                      pages.push(
+                        <Button
+                          key={1}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFastSearchPageChange(1)}
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
+                        >
+                          1
+                        </Button>
+                      )
+                      if (startPageDesktop > 2) {
+                        pages.push(
+                          <span key="ellipsis1" className="px-2 text-muted-foreground hidden lg:inline">
+                            ...
+                          </span>
+                        )
+                      }
                     }
                     
-                    return pages.map(pageNum => (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleFastSearchPageChange(pageNum)}
-                        disabled={isPaginationLoading}
-                        className="w-8 h-8 rounded-full"
-                      >
-                        {pageNum}
-                      </Button>
-                    ))
+                    // Add page range - show different ranges for mobile/medium/desktop
+                    for (let i = 1; i <= totalPages; i++) {
+                      const isInMobileRange = i >= startPageMobile && i <= endPageMobile
+                      const isInMediumRange = i >= startPageMedium && i <= endPageMedium
+                      const isInDesktopRange = i >= startPageDesktop && i <= endPageDesktop
+                      
+                      if (isInMobileRange || isInMediumRange || isInDesktopRange) {
+                        // Determine visibility classes
+                        let visibilityClass = ''
+                        if (isInMobileRange && !isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex sm:hidden'
+                        } else if (isInMediumRange && !isInMobileRange && !isInDesktopRange) {
+                          visibilityClass = 'hidden sm:flex lg:hidden'
+                        } else if (isInDesktopRange && !isInMobileRange && !isInMediumRange) {
+                          visibilityClass = 'hidden lg:flex'
+                        } else if (isInMobileRange && isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex lg:hidden'
+                        } else if (isInMobileRange && isInDesktopRange && !isInMediumRange) {
+                          visibilityClass = 'flex sm:hidden lg:flex'
+                        } else if (isInMediumRange && isInDesktopRange && !isInMobileRange) {
+                          visibilityClass = 'hidden sm:flex'
+                        } else if (isInMobileRange && isInMediumRange && isInDesktopRange) {
+                          visibilityClass = 'flex'
+                        }
+                        
+                        pages.push(
+                          <Button
+                            key={i}
+                            variant={currentPage === i ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleFastSearchPageChange(i)}
+                            disabled={isPaginationLoading}
+                            className={`min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 ${visibilityClass}`}
+                          >
+                            {i}
+                          </Button>
+                        )
+                      }
+                    }
+                    
+                    // Add last page if not in desktop range (desktop only)
+                    if (endPageDesktop < totalPages) {
+                      if (endPageDesktop < totalPages - 1) {
+                        pages.push(
+                          <span key="ellipsis2" className="px-2 text-muted-foreground hidden lg:inline">
+                            ...
+                          </span>
+                        )
+                      }
+                      pages.push(
+                        <Button
+                          key={totalPages}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFastSearchPageChange(totalPages)}
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
+                        >
+                          {totalPages}
+                        </Button>
+                      )
+                    }
+                    
+                    return pages
                   })()}
                 </div>
                 
@@ -766,9 +1309,10 @@ function RecibidorMiamiContent() {
                   size="sm"
                   onClick={() => handleFastSearchPageChange(fastSearchMeta.currentPage + 1)}
                   disabled={!fastSearchMeta.hasNextPage || isPaginationLoading}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Siguiente
+                  <span className="sm:hidden">Sig</span>
+                  <span className="hidden sm:inline">Siguiente</span>
                 </Button>
               </div>
             </div>
@@ -776,37 +1320,140 @@ function RecibidorMiamiContent() {
 
           {/* Regular Pagination - Hide when showing fast search results */}
           {!fastSearchResults && totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground text-center sm:text-left">
                 Mostrando {startItem} a {endItem} de {totalCount} resultados
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(filters.pagina - 1)}
                   disabled={filters.pagina === 1}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Anterior
+                  <span className="sm:hidden">Ant</span>
+                  <span className="hidden sm:inline">Anterior</span>
                 </Button>
                 
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                    const pageNum = i + 1
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={filters.pagina === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(pageNum)}
-                        className="w-8 h-8 rounded-full"
-                      >
-                        {pageNum}
-                      </Button>
-                    )
-                  })}
+                <div className="flex items-center gap-1 overflow-x-auto px-2 sm:px-0">
+                  {(() => {
+                    const currentPage = filters.pagina
+                    
+                    // Responsive maxButtons: 3 on mobile, 5 on medium, 7 on desktop
+                    const maxButtonsMobile = 3
+                    const maxButtonsMedium = 5
+                    const maxButtonsDesktop = 7
+                    
+                    // Calculate for mobile (simple range)
+                    let startPageMobile = Math.max(1, currentPage - Math.floor(maxButtonsMobile / 2))
+                    let endPageMobile = Math.min(totalPages, startPageMobile + maxButtonsMobile - 1)
+                    if (endPageMobile - startPageMobile + 1 < maxButtonsMobile) {
+                      startPageMobile = Math.max(1, endPageMobile - maxButtonsMobile + 1)
+                    }
+                    
+                    // Calculate for medium screens
+                    let startPageMedium = Math.max(1, currentPage - Math.floor(maxButtonsMedium / 2))
+                    let endPageMedium = Math.min(totalPages, startPageMedium + maxButtonsMedium - 1)
+                    if (endPageMedium - startPageMedium + 1 < maxButtonsMedium) {
+                      startPageMedium = Math.max(1, endPageMedium - maxButtonsMedium + 1)
+                    }
+                    
+                    // Calculate for desktop (with ellipsis logic)
+                    let startPageDesktop = Math.max(1, currentPage - Math.floor(maxButtonsDesktop / 2))
+                    let endPageDesktop = Math.min(totalPages, startPageDesktop + maxButtonsDesktop - 1)
+                    if (endPageDesktop - startPageDesktop + 1 < maxButtonsDesktop) {
+                      startPageDesktop = Math.max(1, endPageDesktop - maxButtonsDesktop + 1)
+                    }
+                    
+                    const pages = []
+                    
+                    // Add first page if not in desktop range (desktop only)
+                    if (startPageDesktop > 1) {
+                      pages.push(
+                        <Button
+                          key={1}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(1)}
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
+                        >
+                          1
+                        </Button>
+                      )
+                      if (startPageDesktop > 2) {
+                        pages.push(
+                          <span key="ellipsis1" className="px-2 text-muted-foreground hidden lg:inline">
+                            ...
+                          </span>
+                        )
+                      }
+                    }
+                    
+                    // Add page range - show different ranges for mobile/medium/desktop
+                    for (let i = 1; i <= totalPages; i++) {
+                      const isInMobileRange = i >= startPageMobile && i <= endPageMobile
+                      const isInMediumRange = i >= startPageMedium && i <= endPageMedium
+                      const isInDesktopRange = i >= startPageDesktop && i <= endPageDesktop
+                      
+                      if (isInMobileRange || isInMediumRange || isInDesktopRange) {
+                        // Determine visibility classes
+                        let visibilityClass = ''
+                        if (isInMobileRange && !isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex sm:hidden'
+                        } else if (isInMediumRange && !isInMobileRange && !isInDesktopRange) {
+                          visibilityClass = 'hidden sm:flex lg:hidden'
+                        } else if (isInDesktopRange && !isInMobileRange && !isInMediumRange) {
+                          visibilityClass = 'hidden lg:flex'
+                        } else if (isInMobileRange && isInMediumRange && !isInDesktopRange) {
+                          visibilityClass = 'flex lg:hidden'
+                        } else if (isInMobileRange && isInDesktopRange && !isInMediumRange) {
+                          visibilityClass = 'flex sm:hidden lg:flex'
+                        } else if (isInMediumRange && isInDesktopRange && !isInMobileRange) {
+                          visibilityClass = 'hidden sm:flex'
+                        } else if (isInMobileRange && isInMediumRange && isInDesktopRange) {
+                          visibilityClass = 'flex'
+                        }
+                        
+                        pages.push(
+                          <Button
+                            key={i}
+                            variant={currentPage === i ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(i)}
+                            className={`min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 ${visibilityClass}`}
+                          >
+                            {i}
+                          </Button>
+                        )
+                      }
+                    }
+                    
+                    // Add last page if not in desktop range (desktop only)
+                    if (endPageDesktop < totalPages) {
+                      if (endPageDesktop < totalPages - 1) {
+                        pages.push(
+                          <span key="ellipsis2" className="px-2 text-muted-foreground hidden lg:inline">
+                            ...
+                          </span>
+                        )
+                      }
+                      pages.push(
+                        <Button
+                          key={totalPages}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(totalPages)}
+                          className="min-w-10 h-10 rounded-full px-3 text-sm sm:min-w-8 sm:h-8 sm:px-3 sm:text-base flex-shrink-0 hidden lg:flex"
+                        >
+                          {totalPages}
+                        </Button>
+                      )
+                    }
+                    
+                    return pages
+                  })()}
                 </div>
                 
                 <Button
@@ -814,15 +1461,65 @@ function RecibidorMiamiContent() {
                   size="sm"
                   onClick={() => handlePageChange(filters.pagina + 1)}
                   disabled={filters.pagina === totalPages}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-2 h-10 text-sm sm:px-4 sm:text-sm sm:h-8"
                 >
-                  Siguiente
+                  <span className="sm:hidden">Sig</span>
+                  <span className="hidden sm:inline">Siguiente</span>
                 </Button>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Status Update Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="sm:max-w-[425px] mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-semibold text-center sm:text-left text-accent-blue">
+              Confirmar Actualización de Estado
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center sm:text-left">
+              {confirmationData && (
+                <>
+                  ¿Confirmas actualizar <span className="font-medium">{confirmationData.count} paquete{confirmationData.count !== 1 ? 's' : ''}</span> de <span className="font-medium text-accent-blue">&lsquo;Vuelo Asignado&rsquo;</span> a <span className="font-medium text-emerald-600">&lsquo;En Aduana&rsquo;</span>?
+                  <br />
+                  <br />
+                  <span className="text-sm text-muted-foreground">
+                    Esta acción no se puede deshacer. Los paquetes cambiarán su estado en el sistema.
+                  </span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
+            <AlertDialogCancel 
+              onClick={handleCancelStatusUpdate}
+              disabled={isStatusUpdating}
+              className="rounded-full w-full sm:w-auto"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmStatusUpdate}
+              disabled={isStatusUpdating}
+              className="rounded-full w-full sm:w-auto bg-accent-blue hover:bg-accent-blue/90 text-white"
+            >
+              {isStatusUpdating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Confirmar Actualización
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

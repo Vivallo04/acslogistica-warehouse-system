@@ -1,0 +1,54 @@
+name: Frontend CI (Next.js)
+
+on:
+  push:
+    branches: [ main, development, staging ]
+
+  pull_request:
+    branches: [ main, development, staging ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-lint-typecheck:
+    name: Build, Lint, Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      CI: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build (CI Mode)
+        run: yarn build
+        env:
+          # Mock Firebase config for CI builds
+          NEXT_PUBLIC_FIREBASE_API_KEY: "mock-api-key-for-ci-builds"
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "mock-project.firebaseapp.com"
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: "mock-project-id"
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "mock-project.appspot.com"
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "123456789"
+          NEXT_PUBLIC_FIREBASE_APP_ID: "1:123456789:web:abc123def456"

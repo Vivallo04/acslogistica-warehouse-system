@@ -65,7 +65,10 @@ export function validateCompanyEmail(email: string): boolean {
       'angie@hotmail.com',
       'brayan@hotmail.com',
       'andreycubero21@gmail.com',
-      'acslogisticacr@gmail.com'
+      'acslogisticacr@gmail.com',
+      'bypbrayan@hotmail.com',
+      'edo.mc1391@gmail.com',
+      'mlz810201@gmail.com'
     ]
     
     return allowedEmails.includes(normalizedEmail)
@@ -86,35 +89,6 @@ export async function registerUser(email: string, password: string, fullName: st
 
     // Send email verification
     await sendEmailVerification(user)
-
-    // Create user record in database
-    try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          firebaseUid: user.uid, 
-          email, 
-          fullName,
-          role: 'pending',
-          createdAt: new Date().toISOString()
-        })
-      })
-      
-      if (!response.ok) {
-        // Rollback: delete the Firebase user if database creation fails
-        await user.delete()
-        throw new Error('Failed to create user record')
-      }
-    } catch (dbError) {
-      // Rollback: delete the Firebase user if database creation fails
-      try {
-        await user.delete()
-      } catch (deleteError) {
-        console.error('Failed to rollback Firebase user creation:', deleteError)
-      }
-      throw new Error('Failed to create user record in database')
-    }
 
     return {
       success: true,

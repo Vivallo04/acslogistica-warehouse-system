@@ -445,14 +445,32 @@ function PreRegistroContent() {
       
       // If tracking number is filled, move to next field or process
       if (formData.numeroTracking.trim()) {
-        // Focus on tarima dropdown or trigger processing
-        tarimaSelectRef.current?.click()
-        
-        toast({
-          title: "Tracking escaneado",
-          description: `${formData.numeroTracking} listo para procesar`,
-          duration: 2000,
-        })
+        // Check if tracking search is in progress - add cooldown for scanner compatibility
+        if (trackingSearch.isSearching) {
+          toast({
+            title: "Cargando información del paquete...",
+            description: "Esperando datos del paquete prealertado",
+            duration: 1000,
+          })
+          
+          // Wait 1 second for contenido to load before proceeding
+          setTimeout(() => {
+            tarimaSelectRef.current?.click()
+            toast({
+              title: "Tracking escaneado",
+              description: `${formData.numeroTracking} listo para procesar`,
+              duration: 2000,
+            })
+          }, 1000)
+        } else {
+          // No search in progress - proceed immediately
+          tarimaSelectRef.current?.click()
+          toast({
+            title: "Tracking escaneado",
+            description: `${formData.numeroTracking} listo para procesar`,
+            duration: 2000,
+          })
+        }
       }
     }
   }
